@@ -1,0 +1,1 @@
+from app.manage.register_commands import register_cli_commands

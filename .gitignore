@@ -1,0 +1,7 @@
+.env
+venv/
+migrations/
+instance/
+__pycache__/
+*1.py
+.pytest_cache

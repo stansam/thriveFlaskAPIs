@@ -1,0 +1,1 @@
+from app.auth.schemas.login import LoginSchema
