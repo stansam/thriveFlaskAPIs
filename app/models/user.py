@@ -20,22 +20,27 @@ class User(UserMixin, BaseModel):
     is_active = db.Column(db.Boolean, default=True)
     email_verification_token = db.Column(db.String(100))
     email_verification_token_expires_at = db.Column(db.DateTime)
+    
+    avatar_url = db.Column(db.String(255))
+    referral_code = db.Column(db.String(20), unique=True)
+    referral_credits = db.Column(db.Float, default=0.0)
+    referrer_id = db.Column(db.String(36), db.ForeignKey('users.id')) # For self-referential relationship
+    
+    company_id = db.Column(db.String(36), db.ForeignKey('companies.id'))
+    
+    preferences = db.relationship('UserPreference', backref='user', uselist=False, cascade="all, delete-orphan")
 
     last_login = db.Column(db.DateTime)
     
-    # Subscription
     subscription_tier = db.Column(db.Enum(SubscriptionTier), default=SubscriptionTier.NONE)
     subscription_end = db.Column(db.DateTime)
     monthly_bookings_used = db.Column(db.Integer, default=0)
 
-    # Relationships
     bookings = db.relationship('Booking', backref='customer', lazy='dynamic', foreign_keys='Booking.user_id')
-    quotes = db.relationship('Quote', backref='user', lazy='dynamic', foreign_keys='Quote.user_id')
     payments = db.relationship('Payment', backref='user', lazy='dynamic')
     notifications = db.relationship('Notification', backref='user', lazy='dynamic')
-    referrals = db.relationship('User', backref=db.backref('referrer', remote_side=[id]))
+    referrals = db.relationship('User', backref=db.backref('referrer', remote_side="User.id"))
 
-    # Favorites
     favorite_packages = db.relationship(
         'Package', 
         secondary='user_favorites', 
@@ -43,7 +48,6 @@ class User(UserMixin, BaseModel):
         lazy='dynamic'
     )
 
-    # Association table for favorites
     user_favorites = db.Table('user_favorites',
         db.Column('user_id', db.String(36), db.ForeignKey('users.id'), primary_key=True),
         db.Column('package_id', db.String(36), db.ForeignKey('packages.id'), primary_key=True),
@@ -68,7 +72,6 @@ class User(UserMixin, BaseModel):
         return datetime.now(timezone.utc) < end
     
     def can_book(self):
-        """Check if user can make more bookings based on subscription"""
         if self.subscription_tier == SubscriptionTier.GOLD:
             return True
         elif self.subscription_tier == SubscriptionTier.SILVER:

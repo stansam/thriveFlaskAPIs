@@ -1,9 +1,16 @@
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
+from app.extensions import db
 
-class BaseModel(db.models):
+class BaseModel(db.Model):
     __abstract__ = True
 
-    id = db.Column(uuid(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
-    created_at = db.Column(db.Datetime, default=datetime.now(timezone.utc), nullable=False)
-    updated_at = db.Column(db.Datetime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc), nullable=False)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+    deleted_at = db.Column(db.DateTime, nullable=True)
+
+    def soft_delete(self):
+        self.deleted_at = datetime.now(timezone.utc)
+        db.session.add(self)
+        db.session.commit()
