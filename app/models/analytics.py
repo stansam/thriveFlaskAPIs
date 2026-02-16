@@ -12,3 +12,7 @@ class AnalyticsMetric(BaseModel):
     
     category = db.Column(db.String(50)) 
     dimension_key = db.Column(db.String(100))
+
+    def __repr__(self):
+        return f"<AnalyticsMetric {self.metric_name} on {self.date_dimension}>"
+

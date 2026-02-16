@@ -1,5 +1,6 @@
 from app.extensions import db
 from app.models.base import BaseModel
+from app.models.enums import ServiceType
 
 class PackageBooking(BaseModel):
     __tablename__ = 'package_bookings'
@@ -17,6 +18,9 @@ class PackageBooking(BaseModel):
     
     custom_itinerary = db.relationship('CustomItinerary', backref='package_booking', uselist=False, cascade="all, delete-orphan")
 
+    def __repr__(self):
+        return f"<PackageBooking {self.id} for Booking {self.booking_id}>"
+
 
 class CustomItinerary(BaseModel):
     __tablename__ = 'custom_itineraries'
@@ -31,6 +35,9 @@ class CustomItinerary(BaseModel):
     
     items = db.relationship('CustomItineraryItem', backref='custom_itinerary', lazy='dynamic', cascade="all, delete-orphan")
 
+    def __repr__(self):
+        return f"<CustomItinerary {self.title}>"
+
 
 class CustomItineraryItem(BaseModel):
     __tablename__ = 'custom_itinerary_items'
@@ -41,6 +48,9 @@ class CustomItineraryItem(BaseModel):
     title = db.Column(db.String(100))
     description = db.Column(db.Text)
     location = db.Column(db.String(100))
-    type = db.Column(db.String(50)) 
+    type = db.Column(db.Enum(ServiceType), default=ServiceType.ACTIVITY)
     reference_id = db.Column(db.String(36))
     cost = db.Column(db.Float)
+
+    def __repr__(self):
+        return f"<CustomItineraryItem {self.title} ({self.type})>"

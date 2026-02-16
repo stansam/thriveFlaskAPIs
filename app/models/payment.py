@@ -1,6 +1,6 @@
 from app.extensions import db
 from app.models.base import BaseModel
-from app.models.enums import PaymentStatus, PaymentMethod, SubscriptionTier
+from app.models.enums import PaymentStatus, PaymentMethod, SubscriptionTier, InvoiceStatus, SubscriptionStatus
 
 class Payment(BaseModel):
     __tablename__ = 'payments'
@@ -18,6 +18,9 @@ class Payment(BaseModel):
     payment_date = db.Column(db.DateTime)
     receipt_url = db.Column(db.String(255))
 
+    def __repr__(self):
+        return f"<Payment {self.id} - {self.amount} {self.currency} ({self.status})>"
+
 
 class Invoice(BaseModel):
     __tablename__ = 'invoices'
@@ -34,7 +37,10 @@ class Invoice(BaseModel):
     currency = db.Column(db.String(3), default='USD')
     
     pdf_url = db.Column(db.String(255))
-    status = db.Column(db.String(20), default='issued') 
+    status = db.Column(db.Enum(InvoiceStatus), default=InvoiceStatus.ISSUED)
+
+    def __repr__(self):
+        return f"<Invoice {self.invoice_number} - {self.total_amount} {self.currency}>"
 
 
 class SubscriptionPlan(BaseModel):
@@ -51,6 +57,9 @@ class SubscriptionPlan(BaseModel):
     
     is_active = db.Column(db.Boolean, default=True)
 
+    def __repr__(self):
+        return f"<SubscriptionPlan {self.name} ({self.tier})>"
+
 
 class UserSubscription(BaseModel):
     __tablename__ = 'user_subscriptions'
@@ -60,10 +69,13 @@ class UserSubscription(BaseModel):
     
     plan_id = db.Column(db.String(36), db.ForeignKey('subscription_plans.id'), nullable=False)
     
-    status = db.Column(db.String(20), default='active')
+    status = db.Column(db.Enum(SubscriptionStatus), default=SubscriptionStatus.ACTIVE)
     
     current_period_start = db.Column(db.DateTime, nullable=False)
     current_period_end = db.Column(db.DateTime, nullable=False)
     
     bookings_used_this_period = db.Column(db.Integer, default=0)
     auto_renew = db.Column(db.Boolean, default=True)
+
+    def __repr__(self):
+        return f"<UserSubscription {self.id} - {self.status}>"

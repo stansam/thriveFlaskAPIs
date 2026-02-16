@@ -1,6 +1,6 @@
 from app.extensions import db
 from app.models.base import BaseModel
-from app.models.enums import NotificationType
+from app.models.enums import NotificationType, NotificationPriority
 
 class Notification(BaseModel):
     __tablename__ = "notifications"
@@ -14,7 +14,10 @@ class Notification(BaseModel):
     is_read = db.Column(db.Boolean, default=False)
     action_url = db.Column(db.String(255))
     
-    priority = db.Column(db.String(20), default='normal') 
+    priority = db.Column(db.Enum(NotificationPriority), default=NotificationPriority.NORMAL) 
+
+    def __repr__(self):
+        return f"<Notification {self.id} - {self.type} ({self.priority})>"
 
 
 class NotificationTemplate(BaseModel):
@@ -28,3 +31,6 @@ class NotificationTemplate(BaseModel):
     sms_template = db.Column(db.String(160))
     
     is_active = db.Column(db.Boolean, default=True)
+
+    def __repr__(self):
+        return f"<NotificationTemplate {self.name} ({self.trigger_event})>"

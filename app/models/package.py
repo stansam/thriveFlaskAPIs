@@ -1,5 +1,6 @@
 from app.extensions import db
 from app.models.base import BaseModel
+from app.models.enums import ActivityType
 
 class Package(BaseModel):
     __tablename__ = 'packages'
@@ -19,6 +20,9 @@ class Package(BaseModel):
     itinerary = db.relationship('PackageItinerary', backref='package', lazy='dynamic', cascade="all, delete-orphan", order_by="PackageItinerary.day_number")
     inclusions = db.relationship('PackageInclusion', backref='package', lazy='dynamic', cascade="all, delete-orphan")
 
+    def __repr__(self):
+        return f"<Package {self.title} ({self.slug})>"
+
 
 class PackageItinerary(BaseModel):
     __tablename__ = 'package_itineraries'
@@ -28,7 +32,10 @@ class PackageItinerary(BaseModel):
     title = db.Column(db.String(100))
     description = db.Column(db.Text)
     location = db.Column(db.String(100))
-    activity_type = db.Column(db.String(50)) 
+    activity_type = db.Column(db.Enum(ActivityType))
+
+    def __repr__(self):
+        return f"<PackageItinerary Day {self.day_number} - {self.title}>"
 
 
 class PackageInclusion(BaseModel):
@@ -37,3 +44,6 @@ class PackageInclusion(BaseModel):
     package_id = db.Column(db.String(36), db.ForeignKey('packages.id'), nullable=False)
     description = db.Column(db.String(255), nullable=False)
     is_included = db.Column(db.Boolean, default=True) 
+
+    def __repr__(self):
+        return f"<PackageInclusion {self.description}>"

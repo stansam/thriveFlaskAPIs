@@ -13,6 +13,9 @@ class FlightBooking(BaseModel):
     
     segments = db.relationship('Flight', backref='flight_booking', lazy='dynamic', cascade="all, delete-orphan")
 
+    def __repr__(self):
+        return f"<FlightBooking {self.pnr_reference}>"
+
 
 class Flight(BaseModel):
     __tablename__ = 'flights'
@@ -36,3 +39,6 @@ class Flight(BaseModel):
     gate = db.Column(db.String(10))
     
     seat_assignment = db.Column(db.String(10))
+
+    def __repr__(self):
+        return f"<Flight {self.carrier_code}{self.flight_number} {self.departure_airport_code}->{self.arrival_airport_code}>"

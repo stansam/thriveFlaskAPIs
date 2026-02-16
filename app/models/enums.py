@@ -79,3 +79,56 @@ class ServiceType(BaseEnum):
     HOTEL = "hotel"
     ACTIVITY = "activity"
     TRANSPORT = "transport"
+
+class AuditAction(BaseEnum):
+    CREATE = "create"
+    UPDATE = "update"
+    DELETE = "delete"
+    LOGIN = "login"
+    LOGOUT = "logout"
+    APPROVE = "approve"
+    REJECT = "reject"
+
+class EntityType(BaseEnum):
+    USER = "user"
+    BOOKING = "booking"
+    PAYMENT = "payment"
+    FLIGHT = "flight"
+    PACKAGE = "package"
+    COMPANY = "company"
+    REPORT = "report"
+
+class SubscriptionStatus(BaseEnum):
+    ACTIVE = "active"
+    CANCELLED = "cancelled"
+    EXPIRED = "expired"
+    PAST_DUE = "past_due"
+    TRIALING = "trialing"
+
+class NotificationPriority(BaseEnum):
+    LOW = "low"
+    NORMAL = "normal"
+    HIGH = "high"
+    URGENT = "urgent"
+
+class ActivityType(BaseEnum):
+    SIGHTSEEING = "sightseeing"
+    TRANSFER = "transfer"
+    FREE_TIME = "free_time"
+    MEAL = "meal"
+    ADVENTURE = "adventure"
+    CULTURAL = "cultural"
+
+class InvoiceStatus(BaseEnum):
+    DRAFT = "draft"
+    ISSUED = "issued"
+    PAID = "paid"
+    VOID = "void"
+    OVERDUE = "overdue"
+
+class Gender(BaseEnum):
+    MALE = "male"
+    FEMALE = "female"
+    NON_BINARY = "non_binary"
+    OTHER = "other"
+    PREFER_NOT_TO_SAY = "prefer_not_to_say"

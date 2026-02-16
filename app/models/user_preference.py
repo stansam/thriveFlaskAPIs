@@ -20,3 +20,6 @@ class UserPreference(BaseModel):
     
     # preferred_seat = db.Column(db.String(20)) 
     # meal_preference = db.Column(db.String(50))
+
+    def __repr__(self):
+        return f"<UserPreference {self.user_id}>"

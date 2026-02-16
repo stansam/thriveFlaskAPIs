@@ -20,8 +20,8 @@ class Booking(BaseModel):
     payments = db.relationship('Payment', backref='booking', lazy='dynamic')
     invoices = db.relationship('Invoice', backref='booking', lazy='dynamic')
     
-    flight_booking = db.relationship('FlightBooking', backref='booking', uselist=False, cascade="all, delete-orphan")
     package_booking = db.relationship('PackageBooking', backref='booking', uselist=False, cascade="all, delete-orphan")
 
     def __repr__(self):
-        return f"<Booking {self.reference_code}>"
+        return f"<Booking {self.reference_code} ({self.status})>"
+

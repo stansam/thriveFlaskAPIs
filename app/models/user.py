@@ -80,6 +80,7 @@ class User(UserMixin, BaseModel):
             return self.monthly_bookings_used < 6
         return True  
     
+    
     def to_dict(self):
         return {
             'id': self.id,
@@ -94,4 +95,8 @@ class User(UserMixin, BaseModel):
             'updated_at': self.updated_at,
             'referral_credits': float(self.referral_credits)
         }
+
+    def __repr__(self):
+        return f"<User {self.email} ({self.role})>"
+
 

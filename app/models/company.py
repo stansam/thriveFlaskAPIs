@@ -1,6 +1,6 @@
 from app.extensions import db
 from app.models.base import BaseModel
-from app.models.enums import SubscriptionTier
+from app.models.enums import SubscriptionTier, SubscriptionStatus
 
 class Company(BaseModel):
     __tablename__ = 'companies'
@@ -11,7 +11,7 @@ class Company(BaseModel):
     contact_email = db.Column(db.String(120))
     
     subscription_tier = db.Column(db.Enum(SubscriptionTier), default=SubscriptionTier.NONE)
-    subscription_status = db.Column(db.String(20), default='active')
+    subscription_status = db.Column(db.Enum(SubscriptionStatus), default=SubscriptionStatus.ACTIVE)
     max_bookings_per_month = db.Column(db.Integer, default=0)
     
     employees = db.relationship('User', backref='company', lazy='dynamic')
@@ -25,3 +25,6 @@ class Company(BaseModel):
         elif self.subscription_tier == SubscriptionTier.GOLD:
             return 9999
         return 0
+
+    def __repr__(self):
+        return f"<Company {self.name} ({self.subscription_tier})>"

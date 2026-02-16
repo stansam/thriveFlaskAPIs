@@ -16,3 +16,7 @@ class ServiceFeeRule(BaseModel):
     is_active = db.Column(db.Boolean, default=True)
     
     priority = db.Column(db.Integer, default=0) 
+
+    def __repr__(self):
+        return f"<ServiceFeeRule {self.name} ({self.fee_type})>"
+ 
