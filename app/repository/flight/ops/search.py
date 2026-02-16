@@ -2,8 +2,7 @@ from datetime import datetime, timedelta
 
 class SearchFlights:
     def execute(self, origin: str, destination: str, date: str) -> list[dict]:
-        # MOCK IMPLEMENTATION
-        # In a real app, this would query an Amadeus/Sabre API or a local flight schedule DB
+        # TODO: Implement Google Flights API Logic for now, MOCK IMPLEMENTATION
         
         mock_flights = [
             {

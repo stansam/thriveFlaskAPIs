@@ -20,7 +20,7 @@ class CancelBooking:
             # TODO: Add logic to check cancellation policy and trigger refunds via Finance service
             
             booking.status = BookingStatus.CANCELLED
-            # Store reason in notes or audit log if needed
+            # TODO: Storing reason in notes will audit log later
             if reason:
                 if booking.notes:
                     booking.notes += f"\nCancelled: {reason}"

@@ -10,11 +10,10 @@ class CalculateFees:
 
     def execute(self, fee_type_name: str, amount: float) -> list[dict]:
         try:
-            # fee_type_name should match one of the FeeType enum values (e.g. "flight_domestic")
+            # TODO: Check on Fee_Type implementation
             try:
                 fee_type = FeeType(fee_type_name)
             except ValueError:
-                 # If invalid fee type, return empty or raise? Returning empty is safer for now.
                  return []
 
             rules = self.db.query(ServiceFeeRule).filter_by(fee_type=fee_type, is_active=True).all()

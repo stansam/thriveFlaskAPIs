@@ -12,9 +12,7 @@ class CreateBooking:
 
     def execute(self, user_id: str, booking_type: str, currency: str = "USD", notes: str = None) -> Booking:
         try:
-            # Generate a readable reference code (e.g., THRIVE-XXXX)
-            # In a real app, ensure uniqueness more robustly
-            reference_code = f"THRIVE-{uuid.uuid4().hex[:8].upper()}"
+            reference_code = f"THRIVE-{uuid.uuid4().hex[:8].upper()}" # TODO: Implement booking reference code generator util
             
             new_booking = Booking(
                 reference_code=reference_code,
@@ -31,7 +29,7 @@ class CreateBooking:
             return new_booking
             
         except ValueError as e:
-            raise  # Re-raise standard value errors (e.g. invalid enum)
+            raise 
         except IntegrityError:
             self.db.rollback()
             raise BookingAlreadyExists("Booking reference already exists.")

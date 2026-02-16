@@ -12,20 +12,17 @@ class CreatePackage:
 
     def execute(self, package_data: dict) -> Package:
         try:
-            # Extract nested data
             itinerary_data = package_data.pop('itinerary', [])
             inclusions_data = package_data.pop('inclusions', [])
-            
-            # Generate slug if not provided (simple version)
+            # TODO: Implement slug creation util
             if 'slug' not in package_data:
                 package_data['slug'] = f"{package_data['title'].lower().replace(' ', '-')}-{uuid.uuid4().hex[:6]}"
 
             new_package = Package(**package_data)
             
             self.db.add(new_package)
-            self.db.flush() # get ID
+            self.db.flush() 
             
-            # Add Itinerary Items
             for item in itinerary_data:
                 if 'activity_type' in item and isinstance(item['activity_type'], str):
                      try:
@@ -36,7 +33,6 @@ class CreatePackage:
                 itinerary_item = PackageItinerary(package_id=new_package.id, **item)
                 self.db.add(itinerary_item)
                 
-            # Add Inclusions
             for item in inclusions_data:
                 inclusion = PackageInclusion(package_id=new_package.id, **item)
                 self.db.add(inclusion)

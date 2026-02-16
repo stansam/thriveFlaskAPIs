@@ -14,9 +14,9 @@ class AddPassengerToBooking:
             if not booking:
                 raise BookingNotFound(f"Booking with ID {booking_id} not found")
             
-            # TODO: Validate passenger count against max capacity if applicable
+            # TODO: Validate passenger count against max capacity
             
-            # Map string gender to Enum if necessary
+            # TODO: Map string gender to Enum
             if 'gender' in passenger_data and isinstance(passenger_data['gender'], str):
                  passenger_data['gender'] = Gender(passenger_data['gender'])
 

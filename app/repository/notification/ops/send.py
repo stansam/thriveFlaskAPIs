@@ -12,7 +12,6 @@ class SendNotification:
 
     def execute(self, user_id: str, title: str, message: str, notification_type: str, priority: str = "normal") -> Notification:
         try:
-            # Validate Enums
             try:
                 type_enum = NotificationType(notification_type)
             except ValueError:

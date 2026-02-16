@@ -1,4 +1,4 @@
-from marshmallow import Schema, fields, post_dump, EXCLUDE
+from marshmallow import Schema, fields, post_dump, EXCLUDE, ValidationError
 from datetime import datetime
 class BaseSchema(Schema):
     id = fields.UUID(dump_only=True)
@@ -7,6 +7,10 @@ class BaseSchema(Schema):
     class Meta:
         unknown = EXCLUDE
         ordered = True
+    def handle_error(self, error, **kwargs):
+        raise ValidationError({
+            "message": "Validation error",
+            "errors": error})
     
     @post_dump(pass_many=False)
     def removeNoneFields(self, data: dict, **kwargs) -> dict:

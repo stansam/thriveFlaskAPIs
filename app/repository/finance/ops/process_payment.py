@@ -18,26 +18,23 @@ class ProcessPayment:
 
             booking = self.db.query(Booking).filter_by(id=booking_id).first()
             if not booking:
-                 raise ValueError("Booking not found") # Should properly use BookingNotFound if available or keep it generic
+                 raise ValueError("Booking not found") # TODO: Check on need for BookingNotFound
             
-            # Create Payment Record
             new_payment = Payment(
                 booking_id=booking_id,
                 user_id=booking.user_id,
                 amount=amount,
-                currency=booking.currency, # Assume same currency for now
+                currency=booking.currency, # TODO: Check on currency handling
                 payment_method=payment_method,
-                transaction_id=transaction_id or f"TXN-{uuid.uuid4().hex[:8].upper()}",
+                transaction_id=transaction_id or f"TXN-{uuid.uuid4().hex[:8].upper()}", # TODO: Implement tranaction ID generator util
                 status=PaymentStatus.PAID,
                 payment_date=datetime.now(timezone.utc)
             )
             
             self.db.add(new_payment)
             
-            # Check if total paid covers total cost (Mock logic: assume this payment covers it)
-            # In real system, we sum up all COMPLETED payments for this booking
+            # TODO: Check if total paid covers total cost (Mock logic: assume this payment covers it)
             
-            # Update Booking Status if applicable
             if booking.status == BookingStatus.PENDING:
                 booking.status = BookingStatus.CONFIRMED
                 

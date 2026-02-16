@@ -27,12 +27,7 @@ class ProcessRefund:
             if refund_amount > original_payment.amount:
                  raise InvalidAmount("Cannot refund more than original payment amount")
 
-            # Create Refund Record (Negative payment or specific flag? Model says amount is numeric)
-            # Typically refunds are separate records linked to original, or same table with type/status.
-            # Using Payment model, status=REFUNDED might be for the *original*, or we create a new negative entry.
-            # Let's create a new entry with status=REFUNDED and negative amount implies outflow, 
-            # OR just store positive amount but status indicates flow.
-            # Let's assume standard positive amount but status=REFUNDED implies money back.
+            # TODO: Check on robust refund record creation workflow
             
             refund_payment = Payment(
                 booking_id=original_payment.booking_id,
@@ -40,15 +35,14 @@ class ProcessRefund:
                 amount=refund_amount,
                 currency=original_payment.currency,
                 payment_method=original_payment.payment_method,
-                transaction_id=f"REF-{uuid.uuid4().hex[:8].upper()}",
+                transaction_id=f"REF-{uuid.uuid4().hex[:8].upper()}", # TODO: Implement and hook transaction ID generator util
                 status=PaymentStatus.REFUNDED,
                 payment_date=datetime.now(timezone.utc)
             )
             
             self.db.add(refund_payment)
             
-            # Optionally update original payment status to PARTIALLY_REFUNDED or REFUNDED if full?
-            # Keeping it simple for now.
+            # TODO: Check on updating original payment status to PARTIALLY_REFUNDED or REFUNDED if full
             
             self.db.commit()
             self.db.refresh(refund_payment)

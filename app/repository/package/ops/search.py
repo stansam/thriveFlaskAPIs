@@ -10,7 +10,7 @@ class SearchPackages:
     def execute(self, filters: dict = None) -> list[Package]:
         try:
             query = self.db.query(Package).filter(Package.is_active == True)
-            
+            # TODO: Check on robustness
             if filters:
                 if 'min_price' in filters:
                     query = query.filter(Package.base_price >= filters['min_price'])
@@ -18,7 +18,6 @@ class SearchPackages:
                      query = query.filter(Package.base_price <= filters['max_price'])
                 if 'duration' in filters:
                      query = query.filter(Package.duration_days == filters['duration'])
-                # Simple keyword search
                 if 'keyword' in filters:
                     keyword = f"%{filters['keyword']}%"
                     query = query.filter(Package.title.ilike(keyword) | Package.description.ilike(keyword))

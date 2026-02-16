@@ -14,10 +14,9 @@ class UpdateBookingStatus:
             if not booking:
                 raise BookingNotFound(f"Booking with ID {booking_id} not found")
             
-            # Convert string to Enum to validate
             status_enum = BookingStatus(new_status)
             
-            # Add state transition logic validation here if needed
+            # TODO: Add state transition logic validation here
             # e.g., cannot go from CANCELLED to CONFIRMED
             
             booking.status = status_enum

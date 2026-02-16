@@ -16,16 +16,14 @@ class GenerateInvoice:
             if not booking:
                  raise ValueError("Booking not found") 
 
-            # Create Invoice
-            # If total_amount is not passed, calculate it? For now, we rely on passed amount.
+            # TODO: Check on total amount handling.
             if total_amount is None:
-                # Mock calculation or assume 0
                 total_amount = 0.0
 
             new_invoice = Invoice(
                 booking_id=booking_id,
                 user_id=booking.user_id,
-                invoice_number=f"INV-{uuid.uuid4().hex[:8].upper()}",
+                invoice_number=f"INV-{uuid.uuid4().hex[:8].upper()}", # TODO: Implement invoice number generation util
                 issued_date=datetime.now(timezone.utc),
                 due_date=datetime.now(timezone.utc) + timedelta(days=7),
                 total_amount=total_amount,

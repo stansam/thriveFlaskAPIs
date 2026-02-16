@@ -14,7 +14,6 @@ class GetUserNotifications:
             if unread_only:
                 query = query.filter_by(is_read=False)
             
-            # Order by created_at desc
             return query.order_by(Notification.created_at.desc()).all()
             
         except SQLAlchemyError as e:
