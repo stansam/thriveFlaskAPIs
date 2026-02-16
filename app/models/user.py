@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 import uuid
 from app.extensions import db
 from app.models.base import BaseModel
-from app.models.enums import UserRole, SubscriptionTier
+from app.models.enums import UserRole, SubscriptionTier, Gender
 
 class User(UserMixin, BaseModel):
     __tablename__ = 'users'
@@ -15,16 +15,18 @@ class User(UserMixin, BaseModel):
     last_name = db.Column(db.String(50), nullable=False)
     phone = db.Column(db.String(20))
     role = db.Column(db.Enum(UserRole), default=UserRole.CLIENT, nullable=False)
+    gender = db.Column(db.Enum(Gender), nullable=True)
     
     email_verified = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
     email_verification_token = db.Column(db.String(100))
     email_verification_token_expires_at = db.Column(db.DateTime)
-    
+    locale = db.Column(db.String(10))
+
     avatar_url = db.Column(db.String(255))
     referral_code = db.Column(db.String(20), unique=True)
     referral_credits = db.Column(db.Float, default=0.0)
-    referrer_id = db.Column(db.String(36), db.ForeignKey('users.id')) # For self-referential relationship
+    referrer_id = db.Column(db.String(36), db.ForeignKey('users.id')) 
     
     company_id = db.Column(db.String(36), db.ForeignKey('companies.id'))
     
@@ -47,7 +49,6 @@ class User(UserMixin, BaseModel):
         backref=db.backref('favorited_by', lazy='dynamic'), 
         lazy='dynamic'
     )
-
     user_favorites = db.Table('user_favorites',
         db.Column('user_id', db.String(36), db.ForeignKey('users.id'), primary_key=True),
         db.Column('package_id', db.String(36), db.ForeignKey('packages.id'), primary_key=True),
@@ -89,6 +90,7 @@ class User(UserMixin, BaseModel):
             'last_name': self.last_name,
             'phone': self.phone,
             'role': self.role.value,
+            'gender': self.gender.value if self.gender else None,
             'subscription_tier': self.subscription_tier.value,
             'referral_code': self.referral_code,
             'created_at': self.created_at,
@@ -98,5 +100,3 @@ class User(UserMixin, BaseModel):
 
     def __repr__(self):
         return f"<User {self.email} ({self.role})>"
-
-

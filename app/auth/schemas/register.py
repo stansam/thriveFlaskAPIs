@@ -8,7 +8,7 @@ class RegisterSchema(BaseSchema):
     email = fields.Email(required=True)
     password = fields.Str(required=True, load_only=True, validate=validate.Length(min=8))
     confirm_password = fields.Str(required=True, load_only=True)
-    gender = fields.Str(required=True, validate=validate.OneOf(g.value for g in Gender))
+    gender = fields.Str(required=True, validate=validate.OneOf(Gender.list()))
     phone = fields.Str(required=False, allow_none=True, validate=validate.Length(min=7, max=20))
     
     @pre_load
@@ -23,7 +23,7 @@ class RegisterSchema(BaseSchema):
         return data
 
     @validates_schema
-    def validate_passwords(self, value):
+    def validate_passwords(self, value, **kwargs):
         if value["password"] != value["confirm_password"]:
             raise ValidationError({
                 "confirm_password":"Passwords do not match"})

@@ -10,3 +10,4 @@ class VerifyEmailSchema(BaseSchema):
             "required": "Verification token is required."
         }
     )
+    user_id = fields.String(required=True)

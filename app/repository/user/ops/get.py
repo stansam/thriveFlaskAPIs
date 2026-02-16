@@ -2,6 +2,8 @@ from app.models import User
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from app.repository.user.exceptions import UserNotFound, DatabaseError
+from app.models.enums import UserRole
+
 class GetUserByID:
     def __init__(self, db: Session) -> None:
         self.db = db
@@ -14,7 +16,33 @@ class GetUserByID:
             return user
         except SQLAlchemyError as e:
             raise DatabaseError(f"Database error while fetching user: {str(e)}") from e
+
+class GetUserByEmail:
+    def __init__(self, db: Session) -> None:
+        self.db = db
+
+    def execute(self, email: str) -> User:
+        try:
+            user = self.db.query(User).filter_by(email=email).first()
+            if not user:
+                raise UserNotFound("User not found")
+            return user
+        except SQLAlchemyError as e:
+            raise DatabaseError(f"Database error while fetching user: {str(e)}") from e
         
+class GetAdminUser:
+    def __init__(self, db: Session) -> None:
+        self.db = db
+
+    def execute(self) -> User:
+        try:
+            user = self.db.query(User).filter_by(role=UserRole.ADMIN).first()
+            if not user:
+                raise UserNotFound("User not found")
+            return user
+        except SQLAlchemyError as e:
+            raise DatabaseError(f"Database error while fetching user: {str(e)}") from e
+
 class GetUsers:
     def __init__(self, db: Session) -> None:
         self.db = db

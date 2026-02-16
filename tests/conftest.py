@@ -3,6 +3,7 @@ from app import create_app
 from app.extensions import db
 from app.models import User, Booking
 from app.models.enums import UserRole, SubscriptionTier, BookingStatus, BookingType
+import uuid
 
 @pytest.fixture(scope='session')
 def app():
@@ -11,6 +12,10 @@ def app():
         db.create_all()
         yield app
         db.drop_all()
+
+@pytest.fixture(scope='session')
+def client(app):
+    return app.test_client()
 
 @pytest.fixture(scope='function')
 def db_session(app):
@@ -26,21 +31,29 @@ def db_session(app):
     transaction.rollback()
     connection.close()
 
-import uuid
-
 @pytest.fixture
 def user_factory(db_session):
     def create_user(role=UserRole.CLIENT, **kwargs):
         unique_id = uuid.uuid4().hex[:8]
+        password = kwargs.pop('password', 'hashed_password')
+        
         user = User(
             email=kwargs.get('email', f'test_{unique_id}@example.com'),
-            password_hash='hashed_password',
+            password_hash='hashed_password', # Temporary placeholder, overwritten below if needed
             first_name='Test',
             last_name='User',
             role=role,
             subscription_tier=SubscriptionTier.NONE,
             **kwargs
         )
+        # If password was passed (or default), hash it properly
+        # But wait, 'hashed_password' string is not a valid hash for check_password.
+        # So we should always set_password if we want login to work.
+        if password == 'hashed_password':
+             user.password_hash = 'hashed_password' # Keep dummy if not specified
+        else:
+             user.set_password(password)
+
         db_session.add(user)
         db_session.commit()
         return user

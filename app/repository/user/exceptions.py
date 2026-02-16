@@ -28,3 +28,6 @@ class DatabaseError(UserServiceException):
 class UserCreationFailed(UserServiceException):
     pass
 
+class AuthenticationError(UserServiceException):
+    """Raised when authentication fails"""
+    pass
