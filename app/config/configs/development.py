@@ -1,6 +1,13 @@
 import os
+from dotenv import load_dotenv
 
-class DevelopmentConfig:
+load_dotenv()
+
+from app.config.configs.base import BaseConfig
+
+class DevelopmentConfig(BaseConfig):
+    DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///dev.db'
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-key-please-change'
+
+    GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "mock-client-id") 
+    GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "mock-client-secret")

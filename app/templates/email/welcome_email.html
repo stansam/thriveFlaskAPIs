@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+  <head>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .header {
+        background-color: #f8f9fa;
+        padding: 20px;
+        text-align: center;
+      }
+      .content {
+        padding: 20px;
+      }
+      .footer {
+        padding: 20px;
+        text-align: center;
+        font-size: 12px;
+        color: #666;
+      }
+      .btn {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Welcome to Thrive Travels!</h1>
+      </div>
+      <div class="content">
+        <p>Hello {{ user.first_name }},</p>
+        <p>
+          We are thrilled to have you on board. Thrive Travels is your gateway
+          to unforgettable experiences and seamless journey planning.
+        </p>
+        <p>
+          Get started by exploring our latest packages or customizing your own
+          itinerary.
+        </p>
+        <p style="text-align: center">
+          <a
+            href="{{ url_for('frontend.dashboard', _external=True) }}"
+            class="btn"
+            >Go to Dashboard</a
+          >
+        </p>
+        <p>
+          If you have any questions, our support team is always here to help.
+        </p>
+      </div>
+      <div class="footer">
+        <p>&copy; {{ year }} Thrive Travels. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>

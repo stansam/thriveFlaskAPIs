@@ -1,11 +1,86 @@
-# CLIENT
+from app.repository.email.services import EmailService
+from flask import current_app, url_for
+from app.extensions import db
+import logging
+from datetime import datetime
 
-# Welcome Email
-# Forgot Password Email
-# Reset Password Email
-# Verify Email
-# Verify Email
+logger = logging.getLogger(__name__)
 
-# Booking Created
-# important booking status change update
-# Booking Reminders
+def get_email_service():
+    return EmailService(db.session)
+
+def send_welcome_email(user):
+    """Sends a welcome email to the newly registered user."""
+    try:
+        service = get_email_service()
+        body = service.send_template(
+            "welcome_email.html",
+            context={
+                "user": user,
+                "year": datetime.now().year
+            }
+        )
+        service.send_email(
+            to_email=user.email,
+            subject="Welcome to Thrive Travels!",
+            body_html=body
+        )
+        logger.info(f"Welcome email sent to {user.email}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send welcome email to {user.email}: {e}")
+        return False
+
+def send_verification_email(user, token):
+    """Sends an email verification link."""
+    try:
+        service = get_email_service()
+        # Assuming frontend URL structure. 
+        # In production this should come from config.
+        # For now, we point to a hypothetical frontend route or backend API if API-only
+        verification_url = f"{current_app.config.get('FRONTEND_URL', 'http://localhost:3000')}/verify-email?token={token}&user_id={user.id}"
+        
+        body = service.send_template(
+            "verify_email.html",
+            context={
+                "user": user,
+                "token": token,
+                "verification_url": verification_url,
+                "year": datetime.now().year
+            }
+        )
+        service.send_email(
+            to_email=user.email,
+            subject="Verify Your Email - Thrive Travels",
+            body_html=body
+        )
+        logger.info(f"Verification email sent to {user.email}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send verification email to {user.email}: {e}")
+        return False
+
+def send_password_reset_email(user, token):
+    """Sends a password reset link."""
+    try:
+        service = get_email_service()
+        reset_url = f"{current_app.config.get('FRONTEND_URL', 'http://localhost:3000')}/reset-password?token={token}&email={user.email}"
+        
+        body = service.send_template(
+            "reset_password.html",
+            context={
+                "user": user,
+                "reset_url": reset_url,
+                "year": datetime.now().year
+            }
+        )
+        service.send_email(
+            to_email=user.email,
+            subject="Reset Your Password - Thrive Travels",
+            body_html=body
+        )
+        logger.info(f"Password reset email sent to {user.email}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send password reset email to {user.email}: {e}")
+        return False

@@ -10,7 +10,7 @@ class RegisterSchema(BaseSchema):
     confirm_password = fields.Str(required=True, load_only=True)
     gender = fields.Str(required=True, validate=validate.OneOf(Gender.list()))
     phone = fields.Str(required=False, allow_none=True, validate=validate.Length(min=7, max=20))
-    
+    locale = fields.Str(required=False, allow_none=True)
     @pre_load
     def normalize_input(self, data, **kwargs):
         for key, value in data.items():

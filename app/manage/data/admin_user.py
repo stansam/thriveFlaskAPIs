@@ -3,7 +3,8 @@ admin1 = {
     "password": "Simam456$",
     "first_name": "Stanley",
     "last_name": "Simam",
-    "user_role": "ADMIN",
+    "role": "ADMIN",
     "is_active": True,
+    "email_verified": True,
 }
 

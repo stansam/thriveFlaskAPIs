@@ -10,13 +10,10 @@ import os
 class GoogleOAuth:
     def __init__(self, db: Session) -> None:
         self.db = db
-        # In production, these should be in config/env
         self.GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "mock-client-id") 
 
     def execute(self, token: str) -> User:
         try:
-            # Verify token
-            # In development/mock mode, we might skip actual verification if token is "mock-token"
             if token.startswith("mock-"):
                 id_info = {
                     "email": "mock@example.com",
@@ -39,17 +36,14 @@ class GoogleOAuth:
             if not email:
                  raise AuthenticationError("Google token valid but no email found.")
 
-            # Check if user exists
             user = self.db.query(User).filter_by(email=email).first()
             
             if user:
-                # Update avatar if missing?
                 if not user.avatar_url and id_info.get("picture"):
                     user.avatar_url = id_info.get("picture")
                     self.db.commit()
                 return user
             
-            # Create new user if not exists
             new_user = User(
                 email=email,
                 first_name=id_info.get("given_name", "Unknown"),
@@ -57,7 +51,6 @@ class GoogleOAuth:
                 avatar_url=id_info.get("picture"),
                 email_verified=id_info.get("email_verified", False)
             )
-            # Set a random password for OAuth users so they can't login via password unless they set one
             new_user.set_password(os.urandom(24).hex()) 
             
             self.db.add(new_user)
@@ -66,7 +59,6 @@ class GoogleOAuth:
             return new_user
 
         except ValueError as e:
-            # Invalid token
              raise AuthenticationError(f"Invalid Google Token: {str(e)}")
         except SQLAlchemyError as e:
             self.db.rollback()

@@ -36,9 +36,10 @@ def user_factory(db_session):
     def create_user(role=UserRole.CLIENT, **kwargs):
         unique_id = uuid.uuid4().hex[:8]
         password = kwargs.pop('password', 'hashed_password')
+        email = kwargs.pop('email', f'test_{unique_id}@example.com')
         
         user = User(
-            email=kwargs.get('email', f'test_{unique_id}@example.com'),
+            email=email,
             password_hash='hashed_password', # Temporary placeholder, overwritten below if needed
             first_name='Test',
             last_name='User',

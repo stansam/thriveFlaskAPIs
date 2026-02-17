@@ -2,16 +2,21 @@ from flask.cli import with_appcontext
 from app.models import User
 from app.manage.data.admin_user import admin1
 import click 
+from app.repository.user import UserService
+from app.extensions import db
 
-@click.command("create_superuser")
+@click.command("createsuperuser")
 @with_appcontext
-def create_superuser() -> tuple[str, str]:
-    users = User.query.filter_by(email=admin1[email]).first()
+def create_superuser() -> str:
+    users = User.query.filter_by(email=admin1["email"]).first()
 
     if users:
-        return "Admin user already exists"
+        click.echo("Admin user already exists")
+    try:
+        user_service = UserService(db.session)
 
-    adminUser, error = CreateUser(admin1, user_role="ADMIN")
-    if error:
-        return None, error
-    return f"Admin user created successfully. Email:{adminUser.email}", None
+        adminUser = user_service.CreateUser(admin1)
+        if adminUser:
+            click.echo(f"Admin user created successfully. Email:{adminUser.email}")
+    except Exception as e:
+        click.echo(f"Admin user creation failed: {e}")
