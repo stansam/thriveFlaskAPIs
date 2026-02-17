@@ -7,3 +7,7 @@ __pycache__/
 .pytest_cache
 TODO
 TODO.md
+
+dump.rdb
+app/manage/data/
+

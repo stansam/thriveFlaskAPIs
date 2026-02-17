@@ -1,34 +1,52 @@
 import pytest
+from unittest.mock import patch, MagicMock
 from app.repository.email.services import EmailService
-from app.models import NotificationTemplate
-from app.repository.email.exceptions import TemplateNotFound
+from flask import Flask
 
-def test_send_email_direct(db_session):
-    service = EmailService(db_session)
-    result = service.send_email("test@example.com", "Subject", "Body")
-    assert result is True
+@pytest.fixture
+def email_service(db_session):
+    return EmailService(db_session)
 
-def test_send_template_success(db_session):
-    service = EmailService(db_session)
+@patch('app.repository.email.ops.send.send_async_email.delay')
+def test_send_email_async(mock_delay, email_service):
+    """Test that send_email triggers the celery task."""
+    to = "test@example.com"
+    subject = "Test"
+    body = "<p>Body</p>"
     
-    # Create template
-    tmpl = NotificationTemplate(
-        trigger_event="welcome_email",
-        name="Welcome Email",
-        subject_template="Welcome {{ name }}!",
-        body_html_template="<h1>Hello {{ name }}</h1>"
-    )
-    db_session.add(tmpl)
-    db_session.commit()
-    
-    result = service.send_template(
-        "user@example.com", 
-        "welcome_email", 
-        {"name": "Alice"}
-    )
-    assert result is True
+    # Mock the return value of delay
+    mock_task = MagicMock()
+    mock_task.id = "123"
+    mock_delay.return_value = mock_task
 
-def test_send_template_not_found(db_session):
-    service = EmailService(db_session)
-    with pytest.raises(TemplateNotFound):
-        service.send_template("user@example.com", "unknown_event", {})
+    result = email_service.send_email(to, subject, body)
+    
+    assert result is True
+    mock_delay.assert_called_once_with(to, subject, body, None)
+
+@patch('app.repository.email.ops.render.render_template')
+def test_render_template(mock_render, email_service, app):
+    """Test that render_template calls flask's render_template correctly."""
+    mock_render.return_value = "<html>Rendered</html>"
+    
+    with app.app_context():
+        result = email_service.render_template("welcome.html", {"name": "Test"})
+        
+    assert result == "<html>Rendered</html>"
+    # Verify path adjustment logic if applicable
+    # The current implementation checks startswith "email/"
+    mock_render.assert_called_once()
+    args, kwargs = mock_render.call_args
+    assert args[0] == "email/welcome.html"
+    assert kwargs == {"name": "Test"}
+
+@patch('app.repository.email.ops.render.render_template')
+def test_send_template_legacy_wrapper(mock_render, email_service, app):
+    """Test that the legacy send_template method works as an alias."""
+    mock_render.return_value = "<html>Body</html>"
+    
+    with app.app_context():
+        result = email_service.send_template("reset.html", {})
+        
+    assert result == "<html>Body</html>"
+    mock_render.assert_called_once()

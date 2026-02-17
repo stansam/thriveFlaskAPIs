@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models import User
 from app.repository.user.exceptions import UserNotFound, DatabaseError
+from sqlalchemy.exc import SQLAlchemyError
 
 class DeleteUser:
     def __init__(self, db: Session) -> None:
@@ -11,8 +12,8 @@ class DeleteUser:
             user = self.db.query(User).filter_by(id=user_id).first()
             if not user:
                 raise UserNotFound("User not found")
-            self.db.delete(user)
-            self.db.commit()
+            user.soft_delete()
+            # self.db.commit()
             return user
         except SQLAlchemyError as e:
             self.db.rollback()

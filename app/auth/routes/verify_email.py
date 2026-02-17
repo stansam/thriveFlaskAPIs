@@ -22,15 +22,18 @@ class VerifyEmail(MethodView):
 
         try:
             token = data['token']
-            user_id = request.json.get('user_id')
-            
-            if not user_id:
-                return jsonify({"user_id": ["Missing data for required field."]}), 400
+            email = data['email']
 
             service = UserService(db.session)
+            user_dict = service.GetUserByEmail(email)
+            user_id = None
+
+            if user_dict:
+                user_id = user_dict.id
+            if user_id is None:
+                return jsonify({"message": "User not found."}), 404
             user = service.VerifyUserEmail(user_id, token)
             
-            # Audit & Analytics
             log_audit(
                 action=AuditAction.UPDATE,
                 entity_type=EntityType.USER,

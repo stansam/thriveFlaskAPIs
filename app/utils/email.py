@@ -12,12 +12,14 @@ def get_email_service():
 def send_welcome_email(user):
     """Sends a welcome email to the newly registered user."""
     try:
+        dashboard_url = f"{current_app.config.get('FRONTEND_URL', 'http://localhost:3000')}/dashboard"
         service = get_email_service()
-        body = service.send_template(
+        body = service.render_template(
             "welcome_email.html",
             context={
                 "user": user,
-                "year": datetime.now().year
+                "year": datetime.now().year,
+                "dashboard_url": dashboard_url
             }
         )
         service.send_email(
@@ -35,12 +37,9 @@ def send_verification_email(user, token):
     """Sends an email verification link."""
     try:
         service = get_email_service()
-        # Assuming frontend URL structure. 
-        # In production this should come from config.
-        # For now, we point to a hypothetical frontend route or backend API if API-only
         verification_url = f"{current_app.config.get('FRONTEND_URL', 'http://localhost:3000')}/verify-email?token={token}&user_id={user.id}"
         
-        body = service.send_template(
+        body = service.render_template(
             "verify_email.html",
             context={
                 "user": user,
@@ -66,7 +65,7 @@ def send_password_reset_email(user, token):
         service = get_email_service()
         reset_url = f"{current_app.config.get('FRONTEND_URL', 'http://localhost:3000')}/reset-password?token={token}&email={user.email}"
         
-        body = service.send_template(
+        body = service.render_template(
             "reset_password.html",
             context={
                 "user": user,

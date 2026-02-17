@@ -14,3 +14,6 @@ class BaseModel(db.Model):
         self.deleted_at = datetime.now(timezone.utc)
         db.session.add(self)
         db.session.commit()
+    @property
+    def is_deleted(self):
+        return self.deleted_at is not None

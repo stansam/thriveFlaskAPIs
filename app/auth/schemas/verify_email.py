@@ -10,4 +10,11 @@ class VerifyEmailSchema(BaseSchema):
             "required": "Verification token is required."
         }
     )
-    user_id = fields.String(required=True)
+    email = fields.String(
+        required=True,
+        validate=validate.Length(min=5), # TODO: Implement robust email check.
+        error_messages={
+            "required": "Email is required."
+        }
+    )
+    
