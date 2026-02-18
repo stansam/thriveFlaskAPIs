@@ -4,7 +4,9 @@ from app.repository.finance.ops import (
     ProcessPayment,
     GenerateInvoice,
     CalculateFees,
-    ProcessRefund
+    ProcessRefund,
+    RecordPaymentProof,
+    VerifyPayment
 )
 
 class FinanceService:
@@ -22,3 +24,9 @@ class FinanceService:
 
     def process_refund(self, original_payment_id: str, amount: float = None) -> Payment:
         return ProcessRefund(self.db).execute(original_payment_id, amount)
+
+    def record_payment_proof(self, booking_id: str, receipt_url: str, payment_method: str = "manual_transfer") -> Payment:
+        return RecordPaymentProof(self.db).execute(booking_id, receipt_url, payment_method)
+
+    def verify_payment(self, booking_id: str, verified: bool, rejection_reason: str = None) -> Payment:
+        return VerifyPayment(self.db).execute(booking_id, verified, rejection_reason)

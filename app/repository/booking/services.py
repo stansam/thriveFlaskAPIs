@@ -7,7 +7,9 @@ from app.repository.booking.ops import (
     GetUserBookings,
     UpdateBookingStatus,
     AddPassengerToBooking,
-    CancelBooking
+    AddPassengerToBooking,
+    CancelBooking,
+    UploadTicket
 )
 
 from app.repository.flight.ops import CheckFlightPrice
@@ -70,3 +72,6 @@ class BookingService:
         
     def cancel_booking(self, booking_id: str, reason: str = None) -> Booking:
         return CancelBooking(self.db).execute(booking_id, reason)
+
+    def upload_ticket(self, booking_id: str, ticket_url: str) -> Booking:
+        return UploadTicket(self.db).execute(booking_id, ticket_url)

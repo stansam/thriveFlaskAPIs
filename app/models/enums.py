@@ -18,8 +18,10 @@ class SubscriptionTier(BaseEnum):
 
 class BookingStatus(BaseEnum):
     PENDING = "pending"
+    AWAITING_VERIFICATION = "awaiting_verification"
     REQUESTED = "requested"
     CONFIRMED = "confirmed"
+    TICKETED = "ticketed"
     HELD = "held"
     CANCELLED = "cancelled"
     COMPLETED = "completed"

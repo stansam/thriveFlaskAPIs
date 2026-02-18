@@ -17,3 +17,5 @@ class DatabaseError(FinanceServiceException):
 class InvalidAmount(FinanceServiceException):
     """Raised when payment amount is invalid"""
     pass
+
+FinanceServiceError = FinanceServiceException
