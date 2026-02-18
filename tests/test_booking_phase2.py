@@ -58,6 +58,7 @@ def test_initiate_booking_unavailable(client, user_factory):
     # Mock Flight Details raising error or empty
     with patch('app.repository.flight.adapters.kayak.KayakFlightAdapter.get_flight_details') as mock_check:
         from app.repository.flight.exceptions import FlightServiceError
+        from app.repository.booking.exceptions import BookingServiceError
         mock_check.side_effect = FlightServiceError("Flight not found")
         
         payload = {

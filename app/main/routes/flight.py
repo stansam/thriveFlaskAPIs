@@ -1,20 +1,12 @@
 from flask import Blueprint, request, jsonify
 from app.main import main_bp
 from app.main.schemas.flight_search import FlightSearchSchema
-from app.repository.flight.adapters.kayak import KayakFlightAdapter
-from app.repository.flight.mapper import ResponseMapper
 from app.repository.flight.exceptions import FlightServiceError
 from marshmallow import ValidationError
 import logging
+from flask.views import MethodView
 
 logger = logging.getLogger(__name__)
-
-# Note: Ideally routes should be class-based views (MethodView) to match auth routes style, 
-# but for simple search func-based is also fine. Let's stick to functional for now or switch 
-# if consistency is strictly enforced. Looking at auth/routes/login.py, they use MethodView.
-# Let's use MethodView for consistency.
-
-from flask.views import MethodView
 
 class FlightSearch(MethodView):
     def post(self):
@@ -26,31 +18,11 @@ class FlightSearch(MethodView):
             return jsonify(err.messages), 400
 
         try:
-            # Call Adapter
-            adapter = KayakFlightAdapter()
-            raw_response = adapter.search_flights(params)
-            
-            # Caching Strategy
-            from app.utils.cache import cache
-            import hashlib
-            import json
-
-            # Create a unique cache key based on params
-            # We sort keys to ensure consistency
-            param_string = json.dumps(params, sort_keys=True, default=str)
-            cache_key = f"flight_search:{hashlib.md5(param_string.encode()).hexdigest()}"
-            
-            cached_results = cache.get(cache_key)
-            if cached_results:
-                logger.info(f"Returning cached results for {cache_key}")
-                return jsonify({"results": cached_results}), 200
-
-            # Normalize Response
-            mapper = ResponseMapper()
-            results = mapper.normalize_search_response(raw_response)
-            
-            # Cache the normalized results for 15 minutes
-            cache.set(cache_key, results, timeout=900)
+            # Call Operation
+            # We import here to avoid potential circular imports if Ops import Models that import Blueprint (unlikely but safe)
+            from app.repository.flight.ops.search import SearchFlights
+            search_op = SearchFlights()
+            results = search_op.execute(params)
             
             return jsonify({"results": results}), 200
             
@@ -66,8 +38,6 @@ class FlightDetails(MethodView):
         params = request.args.to_dict()
         
         try:
-            # We can instantiate FlightService with None dB session if purely external
-            # but usually we pass db.session. Here it's fine.
             from app.extensions import db
             from app.repository.flight.services import FlightService
             

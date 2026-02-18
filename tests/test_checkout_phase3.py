@@ -12,22 +12,26 @@ def test_upload_payment_proof_success(client, booking_factory):
     from app.extensions import db
     db.session.commit()
 
-    # Mock UploadService to avoid actual file saving
-    with patch('app.utils.upload.UploadService.save_file') as mock_save:
+    # Mock UploadService to avoid actual file saving and Login
+    with patch('app.utils.upload.UploadService.save_file') as mock_save, \
+         patch('flask_login.utils._get_user') as mock_user:
+        
+        # We need a user object. The booking factory creates one but doesn't attach 'user' obj to booking instance by default if lazy
+        # But booking.user_id exists. Let's create a mock user with that ID.
+        user_mock = MagicMock()
+        user_mock.id = booking.user_id
+        user_mock.is_authenticated = True
+        mock_user.return_value = user_mock
         mock_save.return_value = "receipts/2026/02/test_receipt.jpg"
         
         data = {
             'file': (BytesIO(b"fake image data"), 'receipt.jpg')
         }
         
-        # Add Header for Auth bypass (Phase 3 Dev)
-        headers = {'X-Test-User-ID': booking.user_id}
-        
         response = client.post(
             f'/api/booking/{booking.id}/payment-proof', 
             data=data, 
-            content_type='multipart/form-data',
-            headers=headers
+            content_type='multipart/form-data'
         )
         
         assert response.status_code == 201
@@ -48,31 +52,49 @@ def test_upload_payment_proof_success(client, booking_factory):
 def test_upload_payment_proof_invalid_file(client, booking_factory):
     booking = booking_factory()
     
-    with patch('app.utils.upload.UploadService.save_file') as mock_save:
+    with patch('app.utils.upload.UploadService.save_file') as mock_save, \
+         patch('flask_login.utils._get_user') as mock_user:
+        
+        user_mock = MagicMock()
+        user_mock.id = booking.user_id
+        user_mock.is_authenticated = True
+        mock_user.return_value = user_mock
         mock_save.side_effect = ValueError("File type not allowed")
         
         data = {
             'file': (BytesIO(b"malicious script"), 'script.sh')
         }
-        headers = {'X-Test-User-ID': booking.user_id}
         
         response = client.post(
             f'/api/booking/{booking.id}/payment-proof', 
             data=data, 
-            content_type='multipart/form-data',
-            headers=headers
+            content_type='multipart/form-data'
         )
         
         assert response.status_code == 400
         assert "File type not allowed" in response.get_json()['message']
 
-def test_upload_payment_proof_booking_not_found(client):
-    data = {
-        'file': (BytesIO(b"fake image data"), 'receipt.jpg')
-    }
-    response = client.post(
-        '/api/booking/non_existent_id/payment-proof', 
-        data=data, 
-        content_type='multipart/form-data'
-    )
-    assert response.status_code == 404
+def test_upload_payment_proof_booking_not_found(client, user_factory):
+    # Need a user to be logged in, even if booking doesn't exist?
+    # Actually, the route checks booking first, then auth.
+    # But wait, logic says:
+    # 1. Get Booking (might fail 404)
+    # 2. Check Auth (needs current_user)
+    # If 404 happens first, we might not need auth mock?
+    # BUT, MethodView decorators run BEFORE function body.
+    # @login_required runs first.
+    # So we MUST mock login.
+    
+    user = user_factory()
+    with patch('flask_login.utils._get_user') as mock_user:
+        mock_user.return_value = user
+        
+        data = {
+            'file': (BytesIO(b"fake image data"), 'receipt.jpg')
+        }
+        response = client.post(
+            '/api/booking/non_existent_id/payment-proof', 
+            data=data, 
+            content_type='multipart/form-data'
+        )
+        assert response.status_code == 404

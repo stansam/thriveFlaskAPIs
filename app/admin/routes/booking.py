@@ -11,8 +11,20 @@ import logging
 admin_booking_bp = Blueprint('admin_booking', __name__)
 logger = logging.getLogger(__name__)
 
+from flask_login import login_required, current_user
+from app.models.enums import UserRole
+
+def admin_required(f):
+    @login_required
+    def decorated_function(*args, **kwargs):
+        if current_user.role != UserRole.ADMIN:
+             return jsonify({"message": "Forbidden: Admin access required"}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
 class VerifyPaymentView(MethodView):
-    # TODO: Add @admin_required decorator
+    decorators = [admin_required]
+    
     def post(self, booking_id):
         data = request.json or {}
         status = data.get('status') # 'approved' or 'rejected'
@@ -40,7 +52,8 @@ class VerifyPaymentView(MethodView):
             return jsonify({"message": "An unexpected error occurred"}), 500
 
 class UploadTicketView(MethodView):
-    # TODO: Add @admin_required decorator
+    decorators = [admin_required]
+    
     def post(self, booking_id):
         if 'file' not in request.files:
             return jsonify({"message": "No file part"}), 400

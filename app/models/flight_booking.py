@@ -9,6 +9,7 @@ class FlightBooking(BaseModel):
     
     pnr_reference = db.Column(db.String(20))
     eticket_number = db.Column(db.String(50))
+    ticket_url = db.Column(db.String(255)) # URL/Path to the uploaded PDF
     cabin_class = db.Column(db.Enum(TravelClass), default=TravelClass.ECONOMY)
     
     segments = db.relationship('Flight', backref='flight_booking', lazy='dynamic', cascade="all, delete-orphan")

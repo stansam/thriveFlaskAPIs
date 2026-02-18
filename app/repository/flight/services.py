@@ -12,7 +12,8 @@ class FlightService:
         self.db = db
     
     def search_flights(self, origin: str, destination: str, date: str) -> list[dict]:
-        return SearchFlights().execute(origin, destination, date)
+        params = {"origin": origin, "destination": destination, "date": date}
+        return SearchFlights().execute(params)
 
     def get_flight_by_id(self, flight_id: str) -> Flight:
         return GetFlightByID(self.db).execute(flight_id)

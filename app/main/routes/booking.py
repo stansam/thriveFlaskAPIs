@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app.main import main_bp
 from app.main.schemas.booking_initiate import BookingInitiateSchema
 from app.repository.booking.services import BookingService
+from app.repository.booking.exceptions import BookingServiceError
 from app.repository.finance.services import FinanceService
 from app.repository.finance.exceptions import FinanceServiceError
 from app.utils.upload import UploadService
@@ -14,6 +15,8 @@ from flask.views import MethodView
 # ... imports ...
 
 class PaymentProof(MethodView):
+    decorators = [login_required]
+    
     def post(self, booking_id):
         # 1. Check if user owns booking
         # We need to get the booking first.
@@ -28,10 +31,9 @@ class PaymentProof(MethodView):
                 return jsonify({"message": "Booking not found"}), 404
             
             # Auth check (simplified for now as discussed)
-            user_id = getattr(current_user, 'id', None) or request.headers.get('X-Test-User-ID')
-            if not user_id or booking.user_id != user_id:
-                # return jsonify({"message": "Unauthorized"}), 403
-                pass # Skipping strict auth for Phase 3 dev test per previous pattern
+            # Auth check
+            if booking.user_id != current_user.id:
+                 return jsonify({"message": "Unauthorized"}), 403
 
             # 2. Handle File Upload
             if 'file' not in request.files:
@@ -68,10 +70,7 @@ class PaymentProof(MethodView):
 logger = logging.getLogger(__name__)
 
 class InitiateBooking(MethodView):
-    # @login_required # Commenting out for easier testing via curl, but SHOULD be there.
-    # We will assume user authentication is standard. 
-    # If not logged in, user_id might be None or we return 401. 
-    # For this implementation phase, let's keep it robust.
+    decorators = [login_required]
     
     def post(self):
         # schema validation
@@ -83,29 +82,10 @@ class InitiateBooking(MethodView):
 
         try:
             service = BookingService(db.session)
+            user_id = current_user.id
             
-            # If current_user is not authenticated, we might need a guest flow 
-            # or hardcode a test user ID for development if auth middleware isn't active
-            user_id = getattr(current_user, 'id', None)
-            if not user_id:
-                # Fallback for dev/testing if no Auth header provided
-                # In production this should be 401
-                # return jsonify({"message": "Unauthorized"}), 401
-                # For Phase 2 dev test:
-                pass 
-
-            # For now, let's require user_id to be passed or we fail if no current_user.
-            # But wait, `current_user` is from flask_login.
-            # If we want to test easily, we can mock it or assume middleware works.
-            # Let's handle the case where user_id is missing.
-            if not user_id and not request.headers.get('X-Test-User-ID'):
-                 # We allow a header for testing purposes if not using full login flow
-                 return jsonify({"message": "Authentication required"}), 401
-            
-            real_user_id = user_id or request.headers.get('X-Test-User-ID')
-
             booking = service.initiate_booking(
-                user_id=real_user_id,
+                user_id=user_id,
                 flight_id=data['flight_id'],
                 passengers=data['passengers'],
                 expected_price=data['expected_price']
