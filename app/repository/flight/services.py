@@ -3,7 +3,8 @@ from app.models import Flight, FlightBooking
 from app.repository.flight.ops import (
     SearchFlights,
     GetFlightByID,
-    ReserveSeat
+    ReserveSeat,
+    GetFlightDetails
 )
 
 class FlightService:
@@ -18,3 +19,6 @@ class FlightService:
 
     def reserve_seat(self, booking_id: str, flight_data: dict, seat_number: str) -> FlightBooking:
         return ReserveSeat(self.db).execute(booking_id, flight_data, seat_number)
+
+    def get_flight_details(self, flight_id: str, params: dict = None) -> dict:
+        return GetFlightDetails().execute(flight_id, params)

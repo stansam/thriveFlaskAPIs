@@ -17,3 +17,5 @@ class DatabaseError(FlightServiceException):
 class InvalidSearchCriteria(FlightServiceException):
     """Raised when search parameters are invalid"""
     pass
+
+FlightServiceError = FlightServiceException
