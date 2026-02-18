@@ -25,3 +25,5 @@ class BookingAlreadyExists(BookingServiceException):
 class PaymentRequired(BookingServiceException):
     """Raised when an action requires a completed payment"""
     pass
+
+BookingServiceError = BookingServiceException

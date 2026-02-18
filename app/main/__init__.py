@@ -3,3 +3,4 @@ from flask import Blueprint
 main_bp = Blueprint('main', __name__)
 
 from app.main.routes import flight
+from app.main.routes import booking

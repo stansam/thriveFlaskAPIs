@@ -10,12 +10,48 @@ from app.repository.booking.ops import (
     CancelBooking
 )
 
+from app.repository.flight.ops import CheckFlightPrice
+from app.repository.booking.exceptions import BookingServiceError
+
 class BookingService:
     def __init__(self, db: Session):
         self.db = db
     
-    def create_booking(self, user_id: str, booking_type: str, currency: str = "USD", notes: str = None) -> Booking:
-        return CreateBooking(self.db).execute(user_id, booking_type, currency, notes)
+    def create_booking(self, user_id: str, booking_type: str, total_amount: float = 0.0, currency: str = "USD", notes: str = None, booking_details: dict = None) -> Booking:
+        return CreateBooking(self.db).execute(user_id, booking_type, total_amount, currency, notes, booking_details)
+
+    def initiate_booking(self, user_id: str, flight_id: str, passengers: list, expected_price: float = None) -> Booking:
+        """
+        Validates price/availability and creates a draft booking.
+        """
+        # 1. Live Price Check
+        checker = CheckFlightPrice()
+        check_result = checker.execute(flight_id, expected_price)
+        
+        if not check_result['available']:
+            raise BookingServiceError("Flight is no longer available.")
+        
+        # Optional: Fail if price changed significantly
+        # if check_result['price_changed']:
+        #     raise BookingServiceError(f"Price has changed to {check_result['price']}")
+        
+        # 2. Create Booking
+        # We need to construct the booking details for the CreateBooking op
+        booking_details = {
+            "flight_data": {}, # We might need to fetch this from cache or details if we verify it
+            "pnr_reference": flight_id, # Using token as ref for now
+            "passengers": passengers,
+            "cabin_class": "economy" # TODO: Pass this from request
+        }
+        
+        return self.create_booking(
+            user_id=user_id,
+            booking_type="flight",
+            total_amount=check_result['price'],
+            currency=check_result['currency'],
+            notes="Created via API",
+            booking_details=booking_details
+        )
 
     def get_booking_by_id(self, booking_id: str) -> Booking:
         return GetBookingByID(self.db).execute(booking_id)
