@@ -1,6 +1,13 @@
 from typing import List
 from pydantic import BaseModel, Field
 from app.repository.flight.structure.filter_data import FilterDataDTO
+from app.repository.flight.structure.filtered_res_recommendation import FilteredResultsRecommendationDTO
+from app.repository.flight.structure.legs import LegsDTO
+from app.repository.flight.structure.providers import ProvidersDTO
+from app.repository.flight.structure.results import ResultsDTO, ResultsStatisticsDTO
+from app.repository.flight.structure.search_status import SearchStatusDTO
+from app.repository.flight.structure.segments import SegmentsDTO
+from app.repository.flight.structure.sort_data import SortDataDTO
 
 class SearchFlightResponseDTO(BaseModel):
     data: List[DataDTO] = []
@@ -15,16 +22,17 @@ class DataDTO(BaseModel):
     filtered_results_recommendation: List[FilteredResultsRecommendationDTO] = []
     flight_alert_data: List[FlightAlertDataDTO] = []
     is_user_initiated: bool
-    legs: List[LegsDTO] = []
+    legs: Dict[str, LegsDTO]
     page_number: int
     page_size: int
     price_mode: str
-    providers: List[ProvidersDTO] = []
-    results: List[ResultsDTO] = []
+    providers: Dict[str, ProvidersDTO]
+    result_statistics: List[ResultsStatisticsDTO] = []
+    results: Dict[int, ResultsDTO]
     search_id: str
     search_status: List[SearchStatusDTO] = []
     search_url: List[UrlDTO] = []
-    segments: List[SegmentsDTO] = []
+    segments: Dict[str, SegmentsDTO]
     sort_data: List[SortDataDTO] = []
     sort_mode: str
     status: str
@@ -51,9 +59,12 @@ class AirportDTO(BaseModel):
     display_name: str
     full_display_name: str
    
-class PriceDTO:
+class PriceDTO(BaseModel):
     currency: str
     localized_price: str
     price: float
-    
+
+class FlightAlertDataDTO(BaseModel):
+    price_alert_enabled_for_query: bool
+
     
