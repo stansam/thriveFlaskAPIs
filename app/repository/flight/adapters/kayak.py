@@ -2,7 +2,7 @@ import requests
 from flask import current_app
 import logging
 from app.repository.flight.exceptions import FlightServiceError
-
+from app.repository.flight.requestDTO import FlightSearchRequestDTO
 logger = logging.getLogger(__name__)
 
 class KayakFlightAdapter:
@@ -14,16 +14,7 @@ class KayakFlightAdapter:
         if not self.api_key:
             logger.warning("RAPIDAPI_KEY is not set. Flight search may fail if not mocking.")
 
-    def search_flights(self, params: dict) -> dict:
-        """
-        Executes a flight search against the external API.
-        
-        Args:
-            params (dict): Validated search parameters (origin, destination, date, etc.)
-            
-        Returns:
-            dict: Raw API response (to be processed by mapper)
-        """
+    def search_flights(self, params: FlightSearchRequestDTO ) -> dict:
         endpoint = f"{self.base_url}/search-flights"
         
         headers = {
@@ -31,21 +22,22 @@ class KayakFlightAdapter:
             "X-RapidAPI-Host": self.api_host
         }
         
-        # Map internal params to external API params
-        # Internal: origin, destination, date, cabin_class, passengers
-        # External: origin, destination, departureDate, cabinClass, etc.
-        
         query_params = {
-            "origin": params.get('origin'),
-            "destination": params.get('destination'),
-            "departureDate": params.get('date'),
-            "cabinClass": params.get('cabin_class', 'economy'),
-            "currency": params.get('currency', 'USD')
+            "origin": params.origin,
+            "destination": params.destination,
+            "departure_date": params.departure_date,
         }
-        
-        # TODO: Handle passenger counts mapped to userSearchParams if API supports it in query
-        # For this specific API, it seems some params might be needing special formatting. 
-        # Based on documentation, we pass them as is for simple search.
+        if params.return_date:
+            query_params["return_date"] = params.return_date
+        if params.filterParams:
+            fs_string = FlightFilterMapper.fs_string(params.filterParams)
+            if fs_string != "":
+                filter_dto = params.filterParams(fs=fs_string)
+                query_params["filterParams"] = filter_dto
+        if params.searchMetadata:
+            query_params["searchMetadata"] = params.searchMetadata
+        if params.userSearchParams:
+            query_params["userSearchParams"] = params.userSearchParams
         
         try:
             logger.info(f"Searching flights: {query_params}")

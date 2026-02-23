@@ -17,6 +17,7 @@ class Payment(BaseModel):
     status = db.Column(db.Enum(PaymentStatus), default=PaymentStatus.PENDING)
     payment_date = db.Column(db.DateTime)
     receipt_url = db.Column(db.String(255))
+    payment_proof_url = db.Column(db.String(255))
 
     def __repr__(self):
         return f"<Payment {self.id} - {self.amount} {self.currency} ({self.status})>"

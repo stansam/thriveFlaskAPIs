@@ -66,12 +66,23 @@ class UploadTicketView(MethodView):
             # We use 'tickets' subdirectory
             ticket_url = UploadService.save_file(file, subdir='tickets')
             
-            booking_service = BookingService(db.session)
-            booking = booking_service.upload_ticket(booking_id, ticket_url)
+            pnr = request.form.get('pnr_reference')
+            eticket = request.form.get('eticket_number')
+            
+            from app.repository.flight.services import FlightService
+            flight_service = FlightService(db.session)
+            
+            if pnr and eticket:
+                flight_booking = flight_service.admin_fulfill_ticket(booking_id, pnr, eticket, ticket_url)
+                booking_status = flight_booking.booking.status.value if flight_booking.booking else BookingStatus.COMPLETED.value
+            else:
+                booking_service = BookingService(db.session)
+                booking = booking_service.upload_ticket(booking_id, ticket_url)
+                booking_status = booking.status.value
             
             return jsonify({
                 "message": "Ticket uploaded successfully",
-                "booking_status": booking.status.value,
+                "booking_status": booking_status,
                 "ticket_url": ticket_url
             }), 200
             

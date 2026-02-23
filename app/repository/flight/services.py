@@ -1,11 +1,12 @@
 from sqlalchemy.orm import Session
-from app.models import Flight, FlightBooking
+from app.models import Flight, FlightBooking, Booking
 from app.repository.flight.ops import (
     SearchFlights,
     GetFlightByID,
-    ReserveSeat,
     GetFlightDetails
 )
+from app.repository.flight.ops.create_booking import CreateManualBookingRequest
+from app.repository.flight.ops.admin_ops import AdminCheckPaymentProof, AdminFulfillTicket
 
 class FlightService:
     def __init__(self, db: Session):
@@ -18,8 +19,14 @@ class FlightService:
     def get_flight_by_id(self, flight_id: str) -> Flight:
         return GetFlightByID(self.db).execute(flight_id)
 
-    def reserve_seat(self, booking_id: str, flight_data: dict, seat_number: str) -> FlightBooking:
-        return ReserveSeat(self.db).execute(booking_id, flight_data, seat_number)
+    def create_manual_booking(self, user_id: str, flight_data: dict, amount: float, currency: str = 'USD') -> Booking:
+        return CreateManualBookingRequest(self.db).execute(user_id, flight_data, amount, currency)
+
+    def admin_confirm_payment(self, booking_id: str) -> Booking:
+        return AdminCheckPaymentProof(self.db).confirm_payment(booking_id)
+        
+    def admin_fulfill_ticket(self, booking_id: str, pnr: str, eticket: str, ticket_url: str) -> FlightBooking:
+        return AdminFulfillTicket(self.db).fulfill(booking_id, pnr, eticket, ticket_url)
 
     def get_flight_details(self, flight_id: str, params: dict = None) -> dict:
         return GetFlightDetails().execute(flight_id, params)

@@ -23,9 +23,9 @@ def test_search_flights(db_session):
         assert results[0]['departure_airport'] == "JFK"
         assert results[0]['arrival_airport'] == "LHR"
 
-def test_reserve_seat_success(db_session, booking_factory):
+def test_create_manual_booking_success(db_session):
     service = FlightService(db_session)
-    booking = booking_factory()
+    user_id = "test_user_123"
     
     flight_data = {
         "carrier_code": "BA",
@@ -36,23 +36,27 @@ def test_reserve_seat_success(db_session, booking_factory):
         "arrival_time": datetime.now()
     }
     
-    flight_booking = service.reserve_seat(booking.id, flight_data, "12A")
+    amount = 500.0
     
-    assert flight_booking.booking_id == booking.id
-    # Check if flight segment was created
+    booking = service.create_manual_booking(user_id, flight_data, amount, "USD")
+    
+    assert booking.status == BookingStatus.PAYMENT_PENDING
+    assert booking.total_amount == 500.0
+    assert booking.user_id == user_id
+    
+    # Check flight segment
+    flight_booking = booking.flight_booking
+    assert flight_booking is not None
+    assert flight_booking.pnr_reference == "PENDING"
     assert flight_booking.segments.count() == 1
+    
     segment = flight_booking.segments.first()
     assert segment.carrier_code == "BA"
-    assert segment.seat_assignment == "12A"
 
-def test_reserve_seat_unavailable(db_session, booking_factory):
-    service = FlightService(db_session)
-    booking = booking_factory()
-    
-    flight_data = {} # Data doesn't matter for this mock check
-    
-    with pytest.raises(SeatNotAvailable):
-        service.reserve_seat(booking.id, flight_data, "X99")
+    # Check payment
+    assert booking.payments.count() == 1
+    payment = booking.payments.first()
+    assert payment.amount == 500.0
 
 def test_get_flight_not_found(db_session):
     service = FlightService(db_session)
