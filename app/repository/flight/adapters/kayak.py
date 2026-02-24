@@ -25,19 +25,21 @@ class KayakFlightAdapter:
         query_params = {
             "origin": params.origin,
             "destination": params.destination,
-            "departure_date": params.departure_date,
+            "date": params.departure_date, # rapidapi expects 'date' not 'departure_date'
         }
         if params.return_date:
-            query_params["return_date"] = params.return_date
-        if params.filterParams:
-            fs_string = FlightFilterMapper.fs_string(params.filterParams)
-            if fs_string != "":
-                filter_dto = params.filterParams(fs=fs_string)
-                query_params["filterParams"] = filter_dto
-        if params.searchMetadata:
-            query_params["searchMetadata"] = params.searchMetadata
-        if params.userSearchParams:
-            query_params["userSearchParams"] = params.userSearchParams
+            query_params["returnDate"] = params.return_date # camelCase for API
+            
+        if params.filterParams is not None and len(params.filterParams) > 0:
+            # We take the first filter params object as per common single-request usage
+            filter_params_dto = params.filterParams[0]
+            if filter_params_dto.fs:
+                query_params["fs"] = filter_params_dto.fs
+                
+        # searchMetadata and userSearchParams are typically not direct URL params but might be needed 
+        # in specific Kayak endpoints. Assuming they are mapped to specific API fields if present
+        # but for standard RapidAPI GET /search-flights, only origin, destination, date, returnDate, fs are used.
+        # So we omit them from query_params unless explicitly needed by the specific Kayak implementation.
         
         try:
             logger.info(f"Searching flights: {query_params}")

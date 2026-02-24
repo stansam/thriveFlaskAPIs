@@ -1,6 +1,9 @@
+from typing import List
+from app.repository.flight.requestDTO import FilterFS
+
 class FlightFilterMapper:
     @staticmethod
-    def fs_string(self, filter_params: List[FilterFS]) -> str:
+    def fs_string(filter_params: FilterFS) -> str:
         parts = []
 
         if filter_params.airlines is not None:

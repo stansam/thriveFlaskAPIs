@@ -5,7 +5,8 @@ from app.models.user_preference import UserPreference
 from app.models.booking import Booking
 from app.models.passenger import Passenger
 from app.models.flight_booking import FlightBooking, Flight
-from app.models.package import Package, PackageItinerary, PackageInclusion
+from app.models.package import Package, PackageItinerary, PackageInclusion, PackageMedia
+from app.models.package_price import PackagePricingSeason, PackagePricing
 from app.models.package_booking import PackageBooking, CustomItinerary, CustomItineraryItem
 from app.models.payment import Payment, Invoice, SubscriptionPlan, UserSubscription
 from app.models.service_fee import ServiceFeeRule

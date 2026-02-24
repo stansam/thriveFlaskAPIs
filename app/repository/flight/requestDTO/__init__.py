@@ -49,8 +49,8 @@ class FilterFS(BaseModel):
     airports: Optional[str] = None # CODE or -CODE(Excludes)
     stops: Optional[str] = None # 0, 1, 2, 3, 4
     price: Optional[str] = None # -MAX or MIN-MAX e.g, -500 (under 500) or 200-500
-    legdur:optional[str] = None # DURATION: legdur=-MAX (minutes) e.g legdur=-600 (under 10hours)
-    layoverdur: optional[str] = None # layoverdur=MIN- (minutes) e.g layoverdur=120- (min 2hours) 
+    legdur: Optional[str] = None # DURATION: legdur=-MAX (minutes) e.g legdur=-600 (under 10hours)
+    layoverdur: Optional[str] = None # layoverdur=MIN- (minutes) e.g layoverdur=120- (min 2hours)
     alliance: Optional[str] = None # NAME e.g. =STAR_ALLIANCE
     sameair: Optional[str] = None # sameair
     equipment: Optional[str] = None # TYPE i.e equipment=W (Wide-Body)

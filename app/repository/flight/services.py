@@ -7,13 +7,13 @@ from app.repository.flight.ops import (
 )
 from app.repository.flight.ops.create_booking import CreateManualBookingRequest
 from app.repository.flight.ops.admin_ops import AdminCheckPaymentProof, AdminFulfillTicket
+from app.repository.flight.requestDTO import FlightSearchRequestDTO
 
 class FlightService:
     def __init__(self, db: Session):
         self.db = db
     
-    def search_flights(self, origin: str, destination: str, date: str) -> list[dict]:
-        params = {"origin": origin, "destination": destination, "date": date}
+    def search_flights(self, params: FlightSearchRequestDTO) -> list[dict]:
         return SearchFlights().execute(params)
 
     def get_flight_by_id(self, flight_id: str) -> Flight:

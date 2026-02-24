@@ -137,3 +137,8 @@ class Gender(BaseEnum):
     NON_BINARY = "non_binary"
     OTHER = "other"
     PREFER_NOT_TO_SAY = "prefer_not_to_say"
+
+class PackageDepartureStatus(BaseEnum):
+    OPEN = "open"
+    CLOSED = "closed"
+    SOLD_OUT = "sold_out"

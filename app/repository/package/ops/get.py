@@ -15,3 +15,4 @@ class GetPackageByID:
             return package
         except SQLAlchemyError as e:
             raise DatabaseError(f"Database error while fetching package: {str(e)}") from e
+            

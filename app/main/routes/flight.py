@@ -12,19 +12,39 @@ class FlightSearch(MethodView):
     def post(self):
         schema = FlightSearchSchema()
         try:
-            # Validate input
             params = schema.load(request.json)
         except ValidationError as err:
             return jsonify(err.messages), 400
 
         try:
-            # Call Operation
-            # We import here to avoid potential circular imports if Ops import Models that import Blueprint (unlikely but safe)
             from app.repository.flight.ops.search import SearchFlights
-            search_op = SearchFlights()
-            results = search_op.execute(params)
+            from app.repository.flight.requestDTO import FlightSearchRequestDTO, UserSearchParamsDTO
+            from app.repository.flight.requestDTO import PassengersCodes
             
-            return jsonify({"results": results}), 200
+            passengers_data = params.get('passengers', {})
+            passengers_list = []
+            
+            for _ in range(passengers_data.get('adults', 1)):
+                passengers_list.append(PassengersCodes.ADULT)
+            for _ in range(passengers_data.get('children', 0)):
+                passengers_list.append(PassengersCodes.CHILD)
+            for _ in range(passengers_data.get('infants', 0)):
+                passengers_list.append(PassengersCodes.INFANT)
+                
+            user_search_params = [UserSearchParamsDTO(passengers=passengers_list)]
+            
+            dto_params = FlightSearchRequestDTO(
+                origin=params['origin'],
+                destination=params['destination'],
+                departure_date=params['date'].strftime('%Y-%m-%d'),
+                return_date=params['return_date'].strftime('%Y-%m-%d') if params.get('return_date') else None,
+                userSearchParams=user_search_params
+            )
+            
+            search_op = SearchFlights()
+            results = search_op.execute(dto_params)
+            
+            return jsonify({"results": results.model_dump(exclude_none=True)}), 200
             
         except FlightServiceError as e:
             return jsonify({"message": str(e)}), 503
@@ -34,7 +54,6 @@ class FlightSearch(MethodView):
 
 class FlightDetails(MethodView):
     def get(self, flight_id):
-        # Retrieve optional query parameters (e.g., source source=kayak)
         params = request.args.to_dict()
         
         try:
@@ -44,6 +63,9 @@ class FlightDetails(MethodView):
             service = FlightService(db.session)
             details = service.get_flight_details(flight_id, params)
             
+            if hasattr(details, "model_dump"):
+                details = details.model_dump(exclude_none=True)
+                
             return jsonify(details), 200
             
         except FlightServiceError as e:
@@ -90,6 +112,4 @@ class FlightBook(MethodView):
             logger.error(f"Error booking flight: {e}")
             return jsonify({"message": "Failed to create booking"}), 500
 
-main_bp.add_url_rule('/api/flight/search', view_func=FlightSearch.as_view('flight_search'))
-main_bp.add_url_rule('/api/flight/details/<flight_id>', view_func=FlightDetails.as_view('flight_details'))
-main_bp.add_url_rule('/api/flight/book', view_func=FlightBook.as_view('flight_book'))
+
