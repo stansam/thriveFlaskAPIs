@@ -1,8 +1,8 @@
-from app.services.base.repository import BaseRepository
-from app.repository.base.repository import BaseRepository as NewBaseRepo
-from app.repository.user.repository import UserRepository
-from app.models.user import User
+import sys
+from app.repository.company.repository import CompanyRepository
+from app.repository.booking.repository import BookingRepository
 
-print("Repositories imported successfully.")
-repo = UserRepository()
-print("UserRepository instantiated successfully.")
+print("Imports successful!")
+company_repo = CompanyRepository()
+booking_repo = BookingRepository()
+print("Instantiations successful!")
