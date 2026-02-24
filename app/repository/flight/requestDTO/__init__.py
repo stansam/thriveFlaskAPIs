@@ -1,5 +1,6 @@
-from typing import List 
+from typing import List, Optional
 from enum import Enum
+from pydantic import BaseModel, Field
 
 class PassengersCodes(str, Enum):
     ADULT = "ADT" 

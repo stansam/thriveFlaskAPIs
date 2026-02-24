@@ -34,9 +34,7 @@ class User(UserMixin, BaseModel):
 
     last_login = db.Column(db.DateTime)
     
-    subscription_tier = db.Column(db.Enum(SubscriptionTier), default=SubscriptionTier.NONE)
-    subscription_end = db.Column(db.DateTime)
-    monthly_bookings_used = db.Column(db.Integer, default=0)
+    subscriptions = db.relationship('UserSubscription', backref='user', lazy='dynamic')
 
     bookings = db.relationship('Booking', backref='customer', lazy='dynamic', foreign_keys='Booking.user_id')
     payments = db.relationship('Payment', backref='user', lazy='dynamic')
@@ -64,25 +62,49 @@ class User(UserMixin, BaseModel):
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}"
     
+    def get_active_subscription(self):
+        from app.models.payment import UserSubscription
+        from app.models.enums import SubscriptionStatus
+        now = datetime.now(timezone.utc)
+        
+        sub = self.subscriptions.filter(
+            UserSubscription.status == SubscriptionStatus.ACTIVE,
+            UserSubscription.current_period_end > now
+        ).first()
+        
+        if not sub and self.company_id and self.company:
+            sub = self.company.subscriptions.filter(
+                UserSubscription.status == SubscriptionStatus.ACTIVE,
+                UserSubscription.current_period_end > now
+            ).first()
+            
+        return sub
+
     def has_active_subscription(self):
-        if not self.subscription_end:
-            return False
-        end = self.subscription_end
-        if end.tzinfo is None:
-            end = end.replace(tzinfo=timezone.utc)
-        return datetime.now(timezone.utc) < end
+        return self.get_active_subscription() is not None
     
     def can_book(self):
-        if self.subscription_tier == SubscriptionTier.GOLD:
+        sub = self.get_active_subscription()
+        if not sub:
+            return True  
+            
+        from app.models.payment import SubscriptionPlan
+        plan = SubscriptionPlan.query.get(sub.plan_id)
+        if not plan or plan.booking_limit_count <= 0:
             return True
-        elif self.subscription_tier == SubscriptionTier.SILVER:
-            return self.monthly_bookings_used < 15
-        elif self.subscription_tier == SubscriptionTier.BRONZE:
-            return self.monthly_bookings_used < 6
-        return True  
+            
+        return sub.bookings_used_this_period < plan.booking_limit_count
     
     
     def to_dict(self):
+        sub = self.get_active_subscription()
+        tier = 'none'
+        if sub:
+            from app.models.payment import SubscriptionPlan
+            plan = SubscriptionPlan.query.get(sub.plan_id)
+            if plan:
+                tier = plan.tier.value
+
         return {
             'id': self.id,
             'email': self.email,
@@ -91,7 +113,7 @@ class User(UserMixin, BaseModel):
             'phone': self.phone,
             'role': self.role.value,
             'gender': self.gender.value if self.gender else None,
-            'subscription_tier': self.subscription_tier.value,
+            'subscription_tier': tier,
             'referral_code': self.referral_code,
             'created_at': self.created_at,
             'updated_at': self.updated_at,

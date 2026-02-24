@@ -5,6 +5,8 @@ import hashlib
 from app.repository.flight.requestDTO import FlightSearchRequestDTO
 from app.repository.flight.structure import SearchFlightResponseDTO
 
+import logging
+
 logger = logging.getLogger(__name__)
 
 class SearchFlights:

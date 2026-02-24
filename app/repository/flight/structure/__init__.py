@@ -1,5 +1,15 @@
-from typing import List
+from typing import List, Dict
 from pydantic import BaseModel, Field
+
+class UrlDTO(BaseModel):
+    url: str
+    url_type: str
+
+class PriceDTO(BaseModel):
+    currency: str
+    localized_price: str
+    price: float
+
 from app.repository.flight.structure.filter_data import FilterDataDTO
 from app.repository.flight.structure.filtered_res_recommendation import FilteredResultsRecommendationDTO
 from app.repository.flight.structure.legs import LegsDTO
@@ -46,10 +56,6 @@ class AirlineDTO(BaseModel):
     logo_url: list[Url] = []
     name: str = Field(min_length=1)
 
-class UrlDTO(BaseModel):
-    url: str
-    url_type: str
-
 class AirportsDTO(BaseModel):
     airports: Dict[str, AirportDTO]
 
@@ -58,11 +64,6 @@ class AirportDTO(BaseModel):
     city_name: str
     display_name: str
     full_display_name: str
-   
-class PriceDTO(BaseModel):
-    currency: str
-    localized_price: str
-    price: float
 
 class FlightAlertDataDTO(BaseModel):
     price_alert_enabled_for_query: bool

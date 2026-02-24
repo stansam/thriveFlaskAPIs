@@ -1,6 +1,6 @@
 from app.repository.flight.structure.filter_groups import (
-    FilterAirlinesDTO, FilterAirportsDTO, FilterAlliance,
-    FilterBaditin, FilterBfcDTO, FilterCabinDTO,
+    FilterAirlinesDTO, FilterAirportsDTO, FilterAllianceDTO,
+    FilterBaditinDTO, FilterBfcDTO, FilterCabinDTO,
     FilterCfcDTO, FilterCurrencyDTO, FilterEqModelDTO,
     FilterEquipmentDTO, FilterHideBasicDTO, FilterLandingDTO,
     FilterLayoverAirDTO, FilterLayoverDurDTO, FilterLegDurDTO,
@@ -10,6 +10,7 @@ from app.repository.flight.structure.filter_groups import (
     FilterWifiDTO
     )
 from typing import List 
+from pydantic import BaseModel
 
 class FilterDataDTO(BaseModel):
     airlines: List[FilterAirlinesDTO] = []

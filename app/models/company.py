@@ -10,21 +10,33 @@ class Company(BaseModel):
     address = db.Column(db.String(255))
     contact_email = db.Column(db.String(120))
     
-    subscription_tier = db.Column(db.Enum(SubscriptionTier), default=SubscriptionTier.NONE)
-    subscription_status = db.Column(db.Enum(SubscriptionStatus), default=SubscriptionStatus.ACTIVE)
-    max_bookings_per_month = db.Column(db.Integer, default=0)
-    
     employees = db.relationship('User', backref='company', lazy='dynamic')
     subscriptions = db.relationship('UserSubscription', backref='company', lazy='dynamic')
 
+    def get_active_subscription(self):
+        from app.models.payment import UserSubscription
+        from app.models.enums import SubscriptionStatus
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        return self.subscriptions.filter(
+            UserSubscription.status == SubscriptionStatus.ACTIVE,
+            UserSubscription.current_period_end > now
+        ).first()
+
     def allowed_bookings(self):
-        if self.subscription_tier == SubscriptionTier.BRONZE:
-            return 6
-        elif self.subscription_tier == SubscriptionTier.SILVER:
-            return 15
-        elif self.subscription_tier == SubscriptionTier.GOLD:
-            return 9999
-        return 0
+        sub = self.get_active_subscription()
+        if not sub:
+            return 0
+        from app.models.payment import SubscriptionPlan
+        plan = SubscriptionPlan.query.get(sub.plan_id)
+        return plan.booking_limit_count if plan else 0
 
     def __repr__(self):
-        return f"<Company {self.name} ({self.subscription_tier})>"
+        sub = self.get_active_subscription()
+        tier_name = "None"
+        if sub:
+            from app.models.payment import SubscriptionPlan
+            plan = SubscriptionPlan.query.get(sub.plan_id)
+            if plan:
+                tier_name = plan.tier.name
+        return f"<Company {self.name} ({tier_name})>"

@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Dict
-from app.repository.flight.structure.url import UrlDTO
+from app.repository.flight.structure import UrlDTO
 
 class ResultsStatisticsDTO(BaseModel):
     filtered_ads: int

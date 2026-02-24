@@ -2,7 +2,7 @@ from app.models.base import BaseModel
 from app.models.user import User
 from app.models.company import Company
 from app.models.user_preference import UserPreference
-from app.models.booking import Booking
+from app.models.booking import Booking, BookingLineItem
 from app.models.passenger import Passenger
 from app.models.flight_booking import FlightBooking, Flight
 from app.models.package import Package, PackageItinerary, PackageInclusion, PackageMedia

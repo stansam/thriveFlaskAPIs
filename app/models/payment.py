@@ -26,7 +26,8 @@ class Payment(BaseModel):
 class Invoice(BaseModel):
     __tablename__ = 'invoices'
     
-    booking_id = db.Column(db.String(36), db.ForeignKey('bookings.id'), nullable=False)
+    booking_id = db.Column(db.String(36), db.ForeignKey('bookings.id'), nullable=True)
+    subscription_id = db.Column(db.String(36), db.ForeignKey('user_subscriptions.id'), nullable=True)
     user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     
     invoice_number = db.Column(db.String(50), unique=True, nullable=False)

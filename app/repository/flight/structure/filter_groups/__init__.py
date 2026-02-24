@@ -10,13 +10,13 @@ from app.repository.flight.structure.filter_groups.eqmodel import FilterEqModelD
 from app.repository.flight.structure.filter_groups.equipment import FilterEquipmentDTO
 from app.repository.flight.structure.filter_groups.hidebasic import FilterHideBasicDTO
 from app.repository.flight.structure.filter_groups.landing import FilterLandingDTO
-from app.repository.flight.structure.filter_groups.layoverair import FilterLayoverAirDTO
-from app.repository.flight.structure.filter_groups.layoverdur import FilterLayoverDurDTO
+from app.repository.flight.structure.filter_groups.layoverair import FilterLayOverAirDTO as FilterLayoverAirDTO
+from app.repository.flight.structure.filter_groups.layoverdur import FilterLayOverDurDTO as FilterLayoverDurDTO
 from app.repository.flight.structure.filter_groups.legdur import FilterLegDurDTO
 from app.repository.flight.structure.filter_groups.pfc import FilterPfcDTO
 from app.repository.flight.structure.filter_groups.price import FilterPriceDTO
 from app.repository.flight.structure.filter_groups.providers import FilterProvidersDTO
-from app.repository.flight.structure.filter_groups.redeye import FilterRedeyeDTO
+from app.repository.flight.structure.filter_groups.redeye import FilterRedEyeDTO as FilterRedeyeDTO
 from app.repository.flight.structure.filter_groups.sameair import FilterSameAirDTO
 from app.repository.flight.structure.filter_groups.specificleg import FilterSpecificLegDTO
 from app.repository.flight.structure.filter_groups.split import FilterSplitDTO
