@@ -1,0 +1,4 @@
+Starting with the base and user repository(db queries and crud ops) level workflows from
+
+repository-workflows.md
+, implement the robust production ready exhaustive class based repository level functions. For modularity and flexibility store the seperate repository workflows inside "app/services/" and each in it's own seperate folders, every folder should have **init**.py files setup. Also create reusable utils in each workflow folder to avoid redundancy and simplify the code. Maintain strict code standards, security and best practices. Where placeholders are to be implemented leave TODO comments and also create a TODO document in the specific workflow folder, so that each workflow has it;s own TODO files. AVOID placeholders or incomplete functionalities unless no toher option is present and document accordingly. Create an implementation plan for review before writing any code.
