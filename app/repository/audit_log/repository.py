@@ -47,7 +47,7 @@ class AuditLogRepository(BaseRepository[AuditLog]):
         return self.model.query.filter_by(
             entity_type=entity_type, 
             entity_id=entity_id
-        ).order_by(self.model.timestamp.desc()).all()
+        ).order_by(self.model.created_at.desc()).all()
 
     @handle_db_exceptions
     def get_recent_admin_actions(self, limit: int = 50) -> List[AuditLog]:
@@ -59,4 +59,4 @@ class AuditLogRepository(BaseRepository[AuditLog]):
         restricted_actions = [AuditAction.UPDATE, AuditAction.DELETE]
         return self.model.query.filter(
             self.model.action.in_(restricted_actions)
-        ).order_by(self.model.timestamp.desc()).limit(limit).all()
+        ).order_by(self.model.created_at.desc()).limit(limit).all()

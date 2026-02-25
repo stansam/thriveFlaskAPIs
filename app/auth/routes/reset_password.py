@@ -2,12 +2,12 @@ from flask import request, jsonify, current_app
 from flask.views import MethodView
 from app.auth.schemas.reset_password import ResetPasswordSchema
 from app.extensions import db
-from app.repository.user.services import UserService
+from app.services.user.service import UserService
 from app.utils.email import send_password_reset_email
 from app.utils.audit_log import log_audit
 from app.utils.analytics import track_metric
 from app.models.enums import AuditAction, EntityType
-from app.repository.user.exceptions import UserNotFound
+from app.repository import repositories
 from marshmallow import ValidationError
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 import logging
@@ -24,13 +24,9 @@ class ForgotPassword(MethodView):
         if not email:
             return jsonify({"email": ["Email is required."]}), 400
             
-        service = UserService(db.session)
-        
         try:
-            try:
-                user = service.GetUserByEmail(email)
-            except UserNotFound:
-                user = None
+            # We directly hit the repository for user lookups bypassing deprecated exceptions
+            user = repositories.user.find_by_email(email)
 
             if user:
                 serializer = get_serializer()
@@ -64,13 +60,12 @@ class ResetPassword(MethodView):
             serializer = get_serializer()
             email = serializer.loads(token, salt='password-reset-salt', max_age=3600)
             
-            service = UserService(db.session)
-            user = service.GetUserByEmail(email)
+            user = repositories.user.find_by_email(email)
             if not user:
                  return jsonify({"message": "Invalid token or user not found."}), 400
                  
             user.set_password(new_password)
-            db.session.commit()
+            repositories.user.update(user.id, {"password_hash": user.password_hash}, commit=True)
             
             log_audit(
                 action=AuditAction.UPDATE,

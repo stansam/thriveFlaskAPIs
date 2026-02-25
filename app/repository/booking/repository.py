@@ -22,13 +22,13 @@ class BookingRepository(BaseRepository[Booking]):
     @handle_db_exceptions
     def create_booking(self, user_id: str, data: dict) -> Booking:
         """Injects custom unique reference codes during creation."""
-        data['reference_number'] = generate_reference()
+        data['reference_code'] = generate_reference()
         data['user_id'] = user_id
         return super().create(data, commit=False)
 
     @handle_db_exceptions
-    def find_by_reference(self, reference_number: str) -> Optional[Booking]:
-        return self.model.query.filter_by(reference_number=reference_number.upper()).first()
+    def find_by_reference(self, reference_code: str) -> Optional[Booking]:
+        return self.model.query.filter_by(reference_code=reference_code.upper()).first()
 
     @handle_db_exceptions
     def get_user_bookings_history(self, user_id: str, limit: int = 50, offset: int = 0) -> List[Booking]:
@@ -66,7 +66,7 @@ class BookingRepository(BaseRepository[Booking]):
         Database-level scalar aggregation of total cost fields across CONFIRMED 
         transactions bounded by date. Performs SUM operations entirely server-side.
         """
-        total = db.session.query(func.sum(self.model.total_cost)).filter(
+        total = db.session.query(func.sum(self.model.total_amount)).filter(
             self.model.status == BookingStatus.CONFIRMED,
             self.model.created_at >= start_date,
             self.model.created_at <= end_date

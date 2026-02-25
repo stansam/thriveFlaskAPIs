@@ -26,8 +26,8 @@ class AnalyticsRepository(BaseRepository[AnalyticsMetric]):
         cln_date = normalize_date(date_dimension)
         
         metric = self.model.query.filter_by(
-            name=cln_name,
-            date=cln_date,
+            metric_name=cln_name,
+            date_dimension=cln_date,
             category=category
         ).with_for_update().first() # Lock the row to prevent race conditions during the +=1 increment
         
@@ -35,8 +35,8 @@ class AnalyticsRepository(BaseRepository[AnalyticsMetric]):
             metric.count += 1
         else:
             metric = self.model(
-                name=cln_name,
-                date=cln_date,
+                metric_name=cln_name,
+                date_dimension=cln_date,
                 category=category,
                 count=1
             )
@@ -54,14 +54,14 @@ class AnalyticsRepository(BaseRepository[AnalyticsMetric]):
         cln_name = normalize_metric_name(metric_name)
         
         results = db.session.query(
-            self.model.date,
+            self.model.date_dimension.label('date'),
             func.sum(self.model.count).label('total_count')
         ).filter(
-            self.model.name == cln_name,
-            self.model.date >= start_date,
-            self.model.date <= end_date
+            self.model.metric_name == cln_name,
+            self.model.date_dimension >= start_date,
+            self.model.date_dimension <= end_date
         ).group_by(
-            self.model.date
+            self.model.date_dimension
         ).order_by(
             self.model.date.asc()
         ).all()

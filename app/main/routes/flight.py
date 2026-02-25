@@ -1,7 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app.main import main_bp
 from app.main.schemas.flight_search import FlightSearchSchema
-from app.repository.flight.exceptions import FlightServiceError
 from marshmallow import ValidationError
 import logging
 from flask.views import MethodView
@@ -46,7 +45,8 @@ class FlightSearch(MethodView):
             
             return jsonify({"results": results.model_dump(exclude_none=True)}), 200
             
-        except FlightServiceError as e:
+        except Exception as e:
+            logger.error(f"Flight search error: {e}")
             return jsonify({"message": str(e)}), 503
         except Exception as e:
             logger.error(f"Unexpected error in flight search: {e}", exc_info=True)
@@ -58,7 +58,7 @@ class FlightDetails(MethodView):
         
         try:
             from app.extensions import db
-            from app.repository.flight.services import FlightService
+            from app.services.flight.service import FlightService
             
             service = FlightService(db.session)
             details = service.get_flight_details(flight_id, params)
@@ -68,7 +68,8 @@ class FlightDetails(MethodView):
                 
             return jsonify(details), 200
             
-        except FlightServiceError as e:
+        except Exception as e:
+            logger.error(f"Flight details error: {e}")
             return jsonify({"message": str(e)}), 503
         except Exception as e:
             logger.error(f"Error fetching details: {e}")
@@ -78,7 +79,7 @@ class FlightBook(MethodView):
     def post(self):
         try:
             from app.extensions import db
-            from app.repository.flight.services import FlightService
+            from app.services.flight.service import FlightService
             from flask_login import current_user
             
             # Require authentication
@@ -93,7 +94,7 @@ class FlightBook(MethodView):
             if not flight_data or amount is None:
                 return jsonify({"message": "flight_data and amount(base) are required"}), 400
                 
-            from app.repository.finance.services import FinanceService
+            from app.services.payment.service import PaymentService as FinanceService
             finance_service = FinanceService(db.session)
             
             # calculate fees

@@ -39,5 +39,4 @@ class BookingLineItem(BaseModel):
 
     def __repr__(self):
         return f"<BookingLineItem {self.description} : {self.amount} {self.currency}>"
-        return f"<Booking {self.reference_code} ({self.status})>"
 

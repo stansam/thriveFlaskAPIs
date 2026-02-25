@@ -1,4 +1,4 @@
-from app.repository.email.services import EmailService
+from app.services.notification.service import NotificationService
 from flask import current_app, url_for
 from app.extensions import db
 import logging
@@ -7,7 +7,7 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 def get_email_service():
-    return EmailService(db.session)
+    return NotificationService()
 
 def send_welcome_email(user):
     """Sends a welcome email to the newly registered user."""

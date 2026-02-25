@@ -19,7 +19,7 @@ class FlightBookingRepository(BaseRepository[FlightBooking]):
     def get_flight_booking_with_segments(self, booking_id: str) -> Optional[FlightBooking]:
         """Eagerly loads all sequentially linked Flight segments associated with this booking."""
         return self.model.query.options(
-            joinedload(self.model.flights)
+            joinedload(self.model.segments)
         ).filter_by(id=booking_id).first()
 
     @handle_db_exceptions

@@ -79,5 +79,7 @@ class UserSubscription(BaseModel):
     bookings_used_this_period = db.Column(db.Integer, default=0)
     auto_renew = db.Column(db.Boolean, default=True)
 
+    invoices = db.relationship('Invoice', backref='subscription', lazy='dynamic')
+
     def __repr__(self):
         return f"<UserSubscription {self.id} - {self.status}>"

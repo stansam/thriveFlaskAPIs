@@ -2,7 +2,7 @@ from flask import request, jsonify
 from flask.views import MethodView
 from app.auth.schemas.verify_email import VerifyEmailSchema
 from app.extensions import db
-from app.repository.user.services import UserService
+from app.services.user.service import UserService
 from app.utils.audit_log import log_audit
 from app.utils.analytics import track_metric
 from app.utils.email import send_verification_email

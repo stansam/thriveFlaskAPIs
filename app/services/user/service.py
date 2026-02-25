@@ -1,6 +1,6 @@
 from typing import Optional
 from app.models.user import User
-from app.models.profile import UserPreference
+from app.models.user_preference import UserPreference
 from app.repository import repositories
 from app.dto.user.schemas import UpdateProfileDTO, UpdatePreferencesDTO
 from app.services.user.utils import scramble_pii_string

@@ -3,7 +3,7 @@ from flask.views import MethodView
 from flask_login import login_user
 from app.auth.schemas.login import LoginSchema
 from app.extensions import db
-from app.repository.user.services import UserService
+from app.services.user.service import UserService
 from app.utils.audit_log import log_audit
 from app.utils.analytics import track_metric
 from app.models.enums import AuditAction, EntityType

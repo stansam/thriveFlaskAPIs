@@ -7,6 +7,7 @@ class PackageBooking(BaseModel):
     
     booking_id = db.Column(db.String(36), db.ForeignKey('bookings.id'), nullable=False)
     package_id = db.Column(db.String(36), db.ForeignKey('packages.id'), nullable=True) 
+    departure_id = db.Column(db.String(36), db.ForeignKey('package_departures.id'), nullable=True) # Enables physical slot tracking
     
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)

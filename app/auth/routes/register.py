@@ -2,8 +2,8 @@ from flask import request, jsonify
 from flask.views import MethodView
 from app.auth.schemas.register import RegisterSchema
 from app.extensions import db
-from app.repository.user.services import UserService
-from app.repository.notification.services import NotificationService
+from app.services.user.service import UserService
+from app.services.notification.service import NotificationService
 from app.utils.email import send_welcome_email
 from app.utils.audit_log import log_audit
 from app.utils.analytics import track_metric

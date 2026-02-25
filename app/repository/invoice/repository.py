@@ -26,7 +26,7 @@ class InvoiceRepository(BaseRepository[Invoice]):
         """Queries for open, unpaid billing entries associated with a user."""
         return self.model.query.filter(
             self.model.user_id == user_id,
-            self.model.status == InvoiceStatus.PENDING
+            self.model.status == InvoiceStatus.ISSUED
         ).order_by(self.model.due_date.asc()).all()
 
     @handle_db_exceptions
