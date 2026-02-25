@@ -20,8 +20,24 @@ class BaseRepository(Generic[ModelType]):
 
     @handle_db_exceptions
     def get_all(self, limit: int = 100, offset: int = 0) -> List[ModelType]:
-        """Fetch all records with optional pagination."""
+        """Fetch all records with optional pagination (Legacy)."""
         return self.model.query.limit(limit).offset(offset).all()
+
+    @handle_db_exceptions
+    def get_paginated(self, page: int = 1, per_page: int = 50) -> dict:
+        """
+        Fetch records using SQLAlchemy's native pagination to prevent 
+        memory lockups on massive tables. Returns structural metadata alongside items.
+        """
+        pagination = self.model.query.paginate(page=page, per_page=per_page, error_out=False)
+        return {
+            "items": pagination.items,
+            "total": pagination.total,
+            "pages": pagination.pages,
+            "current_page": pagination.page,
+            "has_next": pagination.has_next,
+            "has_prev": pagination.has_prev
+        }
 
     @handle_db_exceptions
     def create(self, data: dict, commit: bool = True) -> ModelType:

@@ -14,10 +14,11 @@ class AuditLogView(MethodView):
     def get(self):
         """Fetch strict chronological security ledger."""
         try:
-             limit = int(request.args.get('limit', 50))
+             page = request.args.get('page', 1, type=int)
+             limit = request.args.get('limit', 50, type=int)
              
              from app.repository import repositories
-             logs = repositories.audit_log.get_recent_logs(limit=limit)
+             paginated_data = repositories.audit_log.get_recent_logs(page=page, limit=limit)
              
              # Tracking the action inherently observing the logs mapping naturally
              log_audit(
@@ -25,11 +26,16 @@ class AuditLogView(MethodView):
                  entity_type=EntityType.AUDIT_LOG,
                  entity_id=None,
                  user_id=current_user.id,
-                 description="Global Admin fetched compliance trail traces structurally."
+                 description=f"Global Admin fetched compliance trail traces structurally (Page {page})."
              )
              
              return jsonify({
-                 "logs": [log.to_dict() for log in logs]
+                 "items": [log.to_dict() for log in paginated_data["items"]],
+                 "total": paginated_data["total"],
+                 "pages": paginated_data["pages"],
+                 "current_page": paginated_data["current_page"],
+                 "has_next": paginated_data["has_next"],
+                 "has_prev": paginated_data["has_prev"]
              }), 200
 
         except Exception as e:

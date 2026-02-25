@@ -4,6 +4,22 @@ from datetime import datetime
 from app.models.enums import TravelClass
 
 @dataclass
+class PassengerQueryDTO:
+    adults: int
+    children: int = 0
+    infants: int = 0
+
+@dataclass
+class SearchFlightDTO:
+    origin: str
+    destination: str
+    departure_date: datetime
+    cabin_class: TravelClass
+    currency: str
+    passengers: PassengerQueryDTO
+    return_date: Optional[datetime] = None
+
+@dataclass
 class FlightSegmentDTO:
     carrier_code: str
     flight_number: str

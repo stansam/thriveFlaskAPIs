@@ -27,13 +27,23 @@ class DashboardView(MethodView):
             return jsonify(err.messages), 400
 
         from app.repository import repositories
+        from datetime import datetime, timezone, timedelta
+        from app.models.enums import BookingStatus, UserRole, PaymentStatus
         
-        # TODO: Implement analytics aggregation (`repositories.analytics.get_aggregates()`)
+        # Calculate a 30-day trailing window dynamically
+        now = datetime.now(timezone.utc).date()
+        thirty_days_ago = now - timedelta(days=30)
+        
+        total_revenue = repositories.booking.calculate_total_revenue_by_period(start_date=thirty_days_ago, end_date=now)
+        total_bookings = len(repositories.booking.get_bookings_by_status(BookingStatus.CONFIRMED)) # In reality this should be a fast count, but using existing repo
+        active_users = repositories.user.count_active_users_by_role(UserRole.CLIENT)
+        pending_payments = repositories.payment.count_by_status(PaymentStatus.PENDING)
+
         metrics = {
-             "total_revenue": 125000.50,
-             "total_bookings": 450,
-             "active_users": 1205,
-             "pending_payments": 12
+             "total_revenue": round(total_revenue, 2),
+             "total_bookings": total_bookings,
+             "active_users": active_users,
+             "pending_payments": pending_payments
         }
                 
         return jsonify({

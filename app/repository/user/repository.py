@@ -18,13 +18,36 @@ class UserRepository(BaseRepository[User]):
         super().__init__(User)
 
     @handle_db_exceptions
+    def get_all(self, limit: int = 100, offset: int = 0) -> List[User]:
+        """Override to strictly omit soft-deleted identities dynamically."""
+        return self.model.query.filter_by(is_active=True).limit(limit).offset(offset).all()
+
+    @handle_db_exceptions
+    def get_paginated(self, page: int = 1, per_page: int = 50) -> dict:
+        """Override to strictly omit soft-deleted identities from paginated datasets dynamically."""
+        pagination = self.model.query.filter_by(is_active=True).paginate(page=page, per_page=per_page, error_out=False)
+        return {
+            "items": pagination.items,
+            "total": pagination.total,
+            "pages": pagination.pages,
+            "current_page": pagination.page,
+            "has_next": pagination.has_next,
+            "has_prev": pagination.has_prev
+        }
+
+    @handle_db_exceptions
+    def get_all_including_deleted(self, limit: int = 100, offset: int = 0) -> List[User]:
+        """Bypass the soft-delete filter natively if explicitly requested by an Admin."""
+        return super().get_all(limit=limit, offset=offset)
+
+    @handle_db_exceptions
     def find_by_email(self, email: str) -> Optional[User]:
         normalized = normalize_email(email)
         return self.model.query.filter(func.lower(self.model.email) == normalized).first()
 
     @handle_db_exceptions
     def find_by_company(self, company_id: str) -> List[User]:
-        return self.model.query.filter_by(company_id=company_id).all()
+        return self.model.query.filter_by(company_id=company_id, is_active=True).all()
 
     @handle_db_exceptions
     def find_by_verification_token(self, token: str) -> Optional[User]:
@@ -64,7 +87,6 @@ class UserRepository(BaseRepository[User]):
         return self.model.query.filter_by(
             role=role, 
             is_active=True
-            # TODO: Add logic here to filter out soft-deleted users once implemented on model.
         ).count()
 
     @handle_db_exceptions

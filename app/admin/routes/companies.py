@@ -18,9 +18,20 @@ class CompanyListView(MethodView):
 
     def get(self):
         from app.repository import repositories
-        # TODO: Implement pagination.
-        companies = repositories.company.get_all_companies()
-        return jsonify([c.to_dict() for c in companies]), 200
+        
+        page = request.args.get('page', 1, type=int)
+        limit = request.args.get('limit', 50, type=int)
+        
+        paginated_data = repositories.company.get_all_companies(page=page, limit=limit)
+        
+        return jsonify({
+            "items": [c.to_dict() for c in paginated_data["items"]],
+            "total": paginated_data["total"],
+            "pages": paginated_data["pages"],
+            "current_page": paginated_data["current_page"],
+            "has_next": paginated_data["has_next"],
+            "has_prev": paginated_data["has_prev"]
+        }), 200
 
 
 class CompanyStatusView(MethodView):

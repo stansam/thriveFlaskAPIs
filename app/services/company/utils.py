@@ -19,9 +19,9 @@ def enforce_employee_limits(company: Company) -> None:
     # We query the total actively joined employees strictly mapped to the Company natively:
     current_employees_count = company.employees.count()
     
-    # In a fully fleshed app, `seat_limit` would be a native column on SubscriptionPlan. 
-    # For now, we enforce a hardcap mock interceptor ensuring the scaling bounds trigger:
-    seat_limit = plan.fee_waiver_rules.get("max_employees", 50) if plan.fee_waiver_rules else 50
+    # Enforce strictly scaling bounds mapped physically against the active Subscription Plan logic:
+    seat_limit = plan.fee_waiver_rules.get("max_employees") if plan.fee_waiver_rules else None
     
-    if current_employees_count >= seat_limit:
-        raise ValueError(f"Seat limit exceeded. The current active plan tier only allows {seat_limit} registered employees.")
+    # If the tier specifically omits a `max_employees` limit, it is considered unbounded (e.g. Enterprise Custom tier).
+    if seat_limit is not None and current_employees_count >= seat_limit:
+        raise ValueError(f"Seat limit exceeded. The current active plan tier strictly allows only {seat_limit} registered employees.")

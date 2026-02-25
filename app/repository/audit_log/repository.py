@@ -64,3 +64,16 @@ class AuditLogRepository(BaseRepository[AuditLog]):
         return self.model.query.filter(
             self.model.action.in_(restricted_actions)
         ).order_by(self.model.created_at.desc()).limit(limit).all()
+
+    @handle_db_exceptions
+    def get_recent_logs(self, page: int = 1, limit: int = 50) -> dict:
+        """Fetch a paginated chronological ledger of all system security actions."""
+        pagination = self.model.query.order_by(self.model.created_at.desc()).paginate(page=page, per_page=limit, error_out=False)
+        return {
+            "items": pagination.items,
+            "total": pagination.total,
+            "pages": pagination.pages,
+            "current_page": pagination.page,
+            "has_next": pagination.has_next,
+            "has_prev": pagination.has_prev
+        }

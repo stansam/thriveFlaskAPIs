@@ -31,13 +31,20 @@ class BookingRepository(BaseRepository[Booking]):
         return self.model.query.filter_by(reference_code=reference_code.upper()).first()
 
     @handle_db_exceptions
-    def get_user_bookings_history(self, user_id: str, limit: int = 50, offset: int = 0) -> List[Booking]:
-        """Paginates a single user's bookings, ordered most recent first."""
-        return self.model.query.filter_by(user_id=user_id)\
+    def get_user_bookings_history(self, user_id: str, page: int = 1, limit: int = 50) -> dict:
+        """Paginates a single user's bookings securely, ordered most recent first."""
+        pagination = self.model.query.filter_by(user_id=user_id)\
             .order_by(self.model.created_at.desc())\
-            .limit(limit)\
-            .offset(offset)\
-            .all()
+            .paginate(page=page, per_page=limit, error_out=False)
+            
+        return {
+            "items": pagination.items,
+            "total": pagination.total,
+            "pages": pagination.pages,
+            "current_page": pagination.page,
+            "has_next": pagination.has_next,
+            "has_prev": pagination.has_prev
+        }
 
     @handle_db_exceptions
     def get_booking_with_line_items(self, booking_id: str) -> Optional[Booking]:

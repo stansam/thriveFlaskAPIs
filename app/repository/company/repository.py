@@ -16,6 +16,11 @@ class CompanyRepository(BaseRepository[Company]):
         super().__init__(Company)
 
     @handle_db_exceptions
+    def get_all_companies(self, page: int = 1, limit: int = 50) -> dict:
+        """Fetch a paginated list of all active or inactive corporate entities."""
+        return self.get_paginated(page=page, per_page=limit)
+
+    @handle_db_exceptions
     def find_by_tax_id(self, tax_id: str) -> Optional[Company]:
         """Lookup a corporate entity cleanly formatted by its taxation number."""
         clean_tax_id = sanitize_tax_id(tax_id)

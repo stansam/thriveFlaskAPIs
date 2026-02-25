@@ -74,13 +74,45 @@ class SubscriptionService:
         if not new_plan or not new_plan.is_active:
             raise ValueError("Target upgrade plan is inaccessible.")
             
-        # TODO: Calculate explicit prorated differentials comparing the Old Plan against the New Plan mathematically
+        # Calculate exact prorated differentials
+        now = datetime.now(timezone.utc)
+        period_start = subscription.current_period_start.replace(tzinfo=timezone.utc) if subscription.current_period_start.tzinfo is None else subscription.current_period_start
+        period_end = subscription.current_period_end.replace(tzinfo=timezone.utc) if subscription.current_period_end.tzinfo is None else subscription.current_period_end
+        
+        total_days = (period_end - period_start).days or 1
+        unused_days = max(0, (period_end - now).days)
+        
+        old_plan = SubscriptionPlan.query.get(subscription.plan_id)
+        
+        if old_plan and unused_days > 0:
+            old_prorated_credit = (old_plan.price_monthly / total_days) * unused_days
+            new_prorated_cost = (new_plan.price_monthly / total_days) * unused_days
+            differential = max(0, new_prorated_cost - old_prorated_credit)
+            
+            if differential > 0:
+                # Issue differential invoice natively
+                from app.models.payment import Invoice
+                import uuid
+                from app.models.enums import InvoiceStatus
+                
+                differential_invoice = Invoice(
+                    user_id=subscription.user_id,
+                    subscription_id=subscription.id,
+                    invoice_number=f"INV-UPG-{uuid.uuid4().hex[:8].upper()}",
+                    issued_date=now.date(),
+                    due_date=now.date(), 
+                    total_amount=round(differential, 2),
+                    currency=new_plan.currency,
+                    status=InvoiceStatus.ISSUED
+                )
+                self.invoice_repo.create({"user_id": subscription.user_id, "subscription_id": subscription.id, "invoice_number": f"INV-UPG-{uuid.uuid4().hex[:8].upper()}", "issued_date": now.date(), "due_date": now.date(), "total_amount": round(differential, 2), "currency": new_plan.currency, "status": InvoiceStatus.ISSUED}, commit=False)
             
         update_dict = {"plan_id": new_plan.id}
         # Reset the allowed booking count constraints explicitly given a new bounding environment
         update_dict["bookings_used_this_period"] = 0 
         
-        return self.sub_repo.update(subscription.id, update_dict, commit=True)
+        updated_sub = self.sub_repo.update(subscription.id, update_dict, commit=True)
+        return updated_sub
 
     def cancel_subscription(self, subscription_id: str) -> bool:
         """

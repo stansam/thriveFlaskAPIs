@@ -35,11 +35,14 @@ class PaymentRepository(BaseRepository[Payment]):
             
         validated_status = parse_gateway_status(status_payload)
         
-        payment.transaction_id = transaction_id
         payment.status = validated_status
         db.session.commit()
         
         return payment
+
+    @handle_db_exceptions
+    def count_by_status(self, status: PaymentStatus) -> int:
+        return self.model.query.filter_by(status=status).count()
 
     @handle_db_exceptions
     def get_payments_by_invoice(self, invoice_id: str) -> List[Payment]:
