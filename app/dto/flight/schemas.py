@@ -18,6 +18,7 @@ class SearchFlightDTO:
     currency: str
     passengers: PassengerQueryDTO
     return_date: Optional[datetime] = None
+    page: int = 1
 
 @dataclass
 class FlightSegmentDTO:

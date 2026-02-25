@@ -3,7 +3,8 @@ import uuid
 from app.models.flight_booking import FlightBooking, Flight
 from app.models.enums import BookingStatus
 from app.repository import repositories
-from app.dto.flight.schemas import BookFlightDTO
+from app.dto.flight.schemas import BookFlightDTO, SearchFlightDTO
+from app.services.flight.adapter import GDSFlightAdapter
 
 class FlightService:
     """
@@ -15,22 +16,38 @@ class FlightService:
         self.flight_booking_repo = repositories.flight_booking
         self.booking_repo = repositories.booking
         self.user_repo = repositories.user
+        self.api_adapter = GDSFlightAdapter()
         self.subscription_service = None # Defer importing to prevent circular loops if needed
 
-    def search_flights(self, origin: str, destination: str, date: str) -> List[dict]:
+    def search_locations(self, query: str, type_param: str = "airportonly") -> dict:
+        """Proxies geographic queries extracting strictly typed physical coordinates natively."""
+        res = self.api_adapter.search_airports(query, type_param)
+        return res.model_dump()
+
+    def track_flight(self, flight_number: str, airline_id: str, date: str) -> dict:
+        """Proxies real-time radar mapping arrays natively tracking live aircraft."""
+        res = self.api_adapter.get_flight_details(flight_number, airline_id, date)
+        return res.model_dump()
+
+    def search_flights(self, payload: SearchFlightDTO) -> dict:
         """
-        Mocks reaching out to external GDS aggregators (like Amadeus/Sabre) 
-        returning unified segment arrays ready for parsing.
+        Executes physical flight inventory lookups mapping complex structures 
+        strictly across the external GDS aggregators securely.
         """
-        # TODO: Concrete API wireup
-        return [{
-            "carrier_code": "KQ",
-            "flight_number": "100",
-            "departure_airport_code": origin,
-            "arrival_airport_code": destination,
-            "duration_minutes": 120,
-            "price_usd": 250.00
-        }]
+        adults: int = payload.passengers.adults if payload.passengers else 1
+        page: int = payload.page 
+        
+        # Pydantic model dump parsing
+        gds_results = self.api_adapter.search_flights(
+            origin=payload.origin,
+            destination=payload.destination,
+            date=payload.departure_date.strftime("%Y-%m-%d"),
+            adults=adults,
+            cabin_class=payload.cabin_class.value if hasattr(payload.cabin_class, 'value') else payload.cabin_class,
+            page=page
+        )
+        
+        return gds_results.model_dump()
 
     def book_flight(self, data: BookFlightDTO) -> FlightBooking:
         """
