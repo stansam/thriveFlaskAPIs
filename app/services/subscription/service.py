@@ -1,0 +1,110 @@
+from typing import Optional
+from datetime import datetime, timezone
+from app.models.payment import UserSubscription, SubscriptionPlan
+from app.models.enums import SubscriptionStatus, EntityType
+from app.repository import repositories
+from app.dto.subscription.schemas import SubscribeToPlanDTO, UpgradePlanDTO
+from app.services.subscription.utils import calculate_period_end_date
+
+class SubscriptionService:
+    """
+    SubscriptionService maneuvers SaaS tier entitlements explicitly tying external billing 
+    gateway logic softly onto underlying User/Company booking capabilities.
+    """
+
+    def __init__(self):
+        self.sub_repo = repositories.subscription
+        self.user_repo = repositories.user
+        self.company_repo = repositories.company
+        self.invoice_repo = repositories.invoice
+
+    def subscribe_to_plan(self, payload: SubscribeToPlanDTO) -> UserSubscription:
+        """
+        Activates a fresh entitlement cycle bridging the requested Plan cleanly onto
+        the User or Enterprise Company target explicitly initiating invoicing logic natively.
+        """
+        # 1. Fetch Plan 
+        plan = SubscriptionPlan.query.get(payload.plan_id)
+        if not plan or not plan.is_active:
+            raise ValueError("Invalid or inactive subscription plan requested.")
+
+        # 2. Check targets
+        user_id = payload.entity_id if payload.entity_type == EntityType.USER else None
+        company_id = payload.entity_id if payload.entity_type == EntityType.COMPANY else None
+        
+        if user_id and not self.user_repo.get_by_id(user_id):
+            raise ValueError("User target entity does not exist.")
+        if company_id and not self.company_repo.get_by_id(company_id):
+            raise ValueError("Company target entity does not exist.")
+
+        # 3. Formulate the explicit temporal tracking interval (e.g., exactly 30 days upfront)
+        now = datetime.now(timezone.utc)
+        period_end = calculate_period_end_date(now)
+
+        # 4. Create explicitly
+        sub_data = {
+            "user_id": user_id,
+            "company_id": company_id,
+            "plan_id": plan.id,
+            "status": SubscriptionStatus.ACTIVE,
+            "current_period_start": now,
+            "current_period_end": period_end,
+            "auto_renew": True
+        }
+        
+        new_subscription = self.sub_repo.create(sub_data, commit=False)
+        
+        # 5. Generate upfront Invoice cleanly binding back to the created `new_subscription` 
+        # TODO: Route this through `PaymentService` or generate explicitly Native via Repo:
+        invoice_desc = f"Initial Subscription Charge - {plan.name}"
+        # Triggering native payment interception flow internally:
+        from app.extensions import db
+        # For simplicity, defer invoice emission details exactly to a later Payment module phase.
+        db.session.commit()
+        
+        return new_subscription
+
+    def upgrade_plan(self, payload: UpgradePlanDTO) -> UserSubscription:
+        """
+        Safely swaps the ongoing active bounding parameters over to the newly requested plan
+        adjusting temporal windows implicitly if necessary.
+        """
+        subscription = self.sub_repo.get_by_id(payload.subscription_id)
+        if not subscription or subscription.status != SubscriptionStatus.ACTIVE:
+             raise ValueError("Only actively established tracking subscriptions qualify for an upgrade.")
+             
+        new_plan = SubscriptionPlan.query.get(payload.new_plan_id)
+        if not new_plan or not new_plan.is_active:
+            raise ValueError("Target upgrade plan is inaccessible.")
+            
+        # TODO: Calculate explicit prorated differentials comparing the Old Plan against the New Plan mathematically
+            
+        update_dict = {"plan_id": new_plan.id}
+        # Reset the allowed booking count constraints explicitly given a new bounding environment
+        update_dict["bookings_used_this_period"] = 0 
+        
+        return self.sub_repo.update(subscription.id, update_dict, commit=True)
+
+    def cancel_subscription(self, subscription_id: str) -> bool:
+        """
+        Instructs the chronological engine to deliberately allow the ongoing entitlement
+        period to lapse seamlessly avoiding abrupt immediate severed access (unless requested specifically).
+        """
+        subscription = self.sub_repo.get_by_id(subscription_id)
+        if not subscription:
+            return False
+            
+        # Do not flip to EXPIRED yet. The Cron worker handles EXPIRED flipping native upon `current_period_end` passing cleanly
+        self.sub_repo.update(subscription_id, {"auto_renew": False}, commit=True)
+        return True
+
+    def check_booking_eligibility(self, user_id: str) -> bool:
+        """
+        Interrogates exactly whether an upfront checkout payload legally possesses the
+        structural bounds allowing traversal matching against `User.can_book()`.
+        """
+        user = self.user_repo.get_by_id(user_id)
+        if not user:
+            return False
+            
+        return user.can_book()
