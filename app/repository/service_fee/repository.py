@@ -1,5 +1,5 @@
 from typing import List
-from app.models.fee import ServiceFeeRule
+from app.models import ServiceFeeRule
 from app.models.enums import FeeType
 from app.repository.base.repository import BaseRepository
 from app.repository.base.utils import handle_db_exceptions
