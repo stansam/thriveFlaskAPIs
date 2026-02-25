@@ -1,14 +1,13 @@
+import logging
 from flask import request, jsonify
 from flask.views import MethodView
-from flask_login import login_user
+from marshmallow import ValidationError
 from app.auth.schemas.login import LoginSchema
-from app.extensions import db
-from app.services.user.service import UserService
+from app.dto.auth.schemas import LoginRequestDTO
+from app.services.auth.service import AuthService
 from app.utils.audit_log import log_audit
 from app.utils.analytics import track_metric
 from app.models.enums import AuditAction, EntityType
-from marshmallow import ValidationError
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -20,18 +19,22 @@ class Login(MethodView):
         except ValidationError as err:
             return jsonify(err.messages), 400
 
-        service = UserService(db.session)
-        user = service.authenticate_user(data['email'], data['password'])
+        auth_service = AuthService()
+        payload = LoginRequestDTO(
+            email=data['email'],
+            password=data['password'],
+            remember=data.get('remember_me', False)
+        )
+        
+        success, user = auth_service.login_user(payload)
 
-        if user:
-            login_user(user, remember=data.get('remember_me', False))
-            
+        if success and user:
             log_audit(
                 action=AuditAction.LOGIN,
                 entity_type=EntityType.USER,
                 entity_id=user.id,
                 user_id=user.id,
-                description=f"User {user.email} logged in."
+                description="User successfully authenticated."
             )
             track_metric(metric_name="login_success", category="auth")
             
@@ -40,7 +43,7 @@ class Login(MethodView):
                 "user": user.to_dict()
             }), 200
         
-        track_metric(metric_name="login_failure", category="auth")
+        track_metric(metric_name="login_failed", category="auth")
         logger.warning(f"Failed login attempt for {data.get('email')}")
         
-        return jsonify({"message": "Invalid email or password"}), 401
+        return jsonify({"error": "Invalid email or password"}), 401

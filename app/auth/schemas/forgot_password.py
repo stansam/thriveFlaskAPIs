@@ -1,10 +1,8 @@
-from marshmallow import fields, validate, pre_load
+from marshmallow import fields, pre_load
 from app.schemas import BaseSchema
 
-class LoginSchema(BaseSchema):
+class ForgotPasswordSchema(BaseSchema):
     email = fields.Email(required=True)
-    password = fields.String(required=True, load_only=True, validate=validate.Length(min=8))
-    remember_me = fields.Boolean(required=False, load_default=False)
 
     @pre_load
     def normalize_input(self, data, **kwargs):

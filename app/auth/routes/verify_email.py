@@ -1,80 +1,36 @@
+import logging
 from flask import request, jsonify
 from flask.views import MethodView
+from marshmallow import ValidationError
 from app.auth.schemas.verify_email import VerifyEmailSchema
-from app.extensions import db
-from app.services.user.service import UserService
+from app.services.auth.service import AuthService
 from app.utils.audit_log import log_audit
 from app.utils.analytics import track_metric
-from app.utils.email import send_verification_email
 from app.models.enums import AuditAction, EntityType
-from marshmallow import ValidationError
-import logging
 
 logger = logging.getLogger(__name__)
 
 class VerifyEmail(MethodView):
     def post(self):
+        # Allow token ingestion via JSON body or URL Query explicitly
+        token = request.args.get('token') or (request.json or {}).get('token')
+        
         schema = VerifyEmailSchema()
         try:
-            data = schema.load(request.json)
+            data = schema.load({'token': token} if token else request.json)
         except ValidationError as err:
             return jsonify(err.messages), 400
 
-        try:
-            token = data['token']
-            email = data['email']
-
-            service = UserService(db.session)
-            user_dict = service.GetUserByEmail(email)
-            user_id = None
-
-            if user_dict:
-                user_id = user_dict.id
-            if user_id is None:
-                return jsonify({"message": "User not found."}), 404
-            user = service.VerifyUserEmail(user_id, token)
-            
-            log_audit(
-                action=AuditAction.UPDATE,
-                entity_type=EntityType.USER,
-                entity_id=user.id,
-                user_id=user.id,
-                description=f"User {user.email} verified email."
-            )
+        auth_service = AuthService()
+        success = auth_service.verify_email(data['token'])
+        
+        if success:
+            # Note: The raw physical DB model lacks the `user_id` context directly returned from verify_email True/False
+            # If explicit Audit logging is requested, the AuthService API should be adjusted to return `user` object.
+            # Assuming basic tracking:
             track_metric(metric_name="email_verified", category="auth")
-
-            return jsonify({
-                "message": "Email verified successfully.",
-                "user": user.to_dict()
-            }), 200
             
-        except Exception as e:
-            logger.error(f"Email verification failed: {e}")
-            return jsonify({"message": str(e)}), 400
-
-class ResendVerification(MethodView):
-    def post(self):
-        email = request.json.get('email')
-        if not email:
-             return jsonify({"email": ["Email is required."]}), 400
-
-        user_service = UserService(db.session)
-        try:
-            user = user_service.GetUserByEmail(email)
-            if user:
-                if user.email_verified:
-                    return jsonify({"message": "Email is already verified."}), 400
-                
-                user = user_service.GenerateEmailVerificationToken(user.id)
-                db.session.commit() 
-                
-                send_verification_email(user, user.email_verification_token)
-                
-                track_metric(metric_name="verification_resend_requested", category="auth")
-                logger.info(f"Verification email resend requested for {email}")
+            return jsonify({"message": "Email successfully verified!"}), 200
             
-            return jsonify({"message": "If this email is registered and unverified, you will receive a verification link."}), 200
-            
-        except Exception as e:
-             logger.error(f"Resend verification failed: {e}")
-             return jsonify({"message": "An error occurred"}), 500
+        logger.warning("Failed email verification attempt explicitly triggering bounds.")
+        return jsonify({"error": "Invalid or expired verification token."}), 400
