@@ -30,13 +30,13 @@ class AuditService:
                  # Cleanly bypassed out-of-request context failures natively
                  pass
 
-        self.audit_repo.create({
-            "user_id": payload.user_id,
-            "action": payload.action,
-            "entity_type": payload.entity_type,
-            "entity_id": payload.entity_id,
-            "description": payload.description,
-            "changes": payload.changes,
-            "ip_address": current_ip,
-            "user_agent": current_agent
-        }, commit=True)
+        self.audit_repo.log_action(
+            user_id=payload.user_id,
+            action=payload.action,
+            entity_type=payload.entity_type,
+            entity_id=payload.entity_id,
+            changes=payload.changes,
+            description=payload.description,
+            ip_address=current_ip,
+            user_agent=current_agent
+        )

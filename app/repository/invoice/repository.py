@@ -37,6 +37,13 @@ class InvoiceRepository(BaseRepository[Invoice]):
             .all()
 
     @handle_db_exceptions
+    def get_invoices_by_booking_id(self, booking_id: str) -> List[Invoice]:
+        """Fetches a chronological ledger of billing linked to a specific booking."""
+        return self.model.query.filter_by(booking_id=booking_id)\
+            .order_by(self.model.created_at.desc())\
+            .all()
+
+    @handle_db_exceptions
     def mark_invoice_as_paid(self, invoice_id: str, payment_id: str) -> Optional[Invoice]:
         """Atomically locks the invoice status to PAID tracking the successful gateway attempt."""
         invoice = self.get_by_id(invoice_id)

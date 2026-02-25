@@ -22,7 +22,9 @@ class AuditLogRepository(BaseRepository[AuditLog]):
         entity_type: EntityType, 
         entity_id: str, 
         changes: dict, 
-        ip_address: Optional[str] = None
+        description: Optional[str] = None,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None
     ) -> AuditLog:
         """
         Inserts an immutable security trail summarizing state mutations securely.
@@ -35,8 +37,10 @@ class AuditLogRepository(BaseRepository[AuditLog]):
             'action': action,
             'entity_type': entity_type,
             'entity_id': entity_id,
+            'description': description,
             'changes': safe_changes,
-            'ip_address': ip_address
+            'ip_address': ip_address,
+            'user_agent': user_agent
         }
         # Commit True ensures audit trails survive downstream transaction rollbacks elsewhere natively
         return super().create(data, commit=True)

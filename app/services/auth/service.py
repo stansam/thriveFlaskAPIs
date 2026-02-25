@@ -63,17 +63,14 @@ class AuthService:
         user.set_password(data.password)
         
         # Instruct repo to just append and commit the completely assembled object natively
-        created_user = self.user_repo.create(
-            {k:v for k,v in user.__dict__.items() if not k.startswith('_')}, 
-            commit=True
-        )
+        created_user = self.user_repo.save_user(user)
         
         # TODO: Trigger email sending via NotificationService natively handing off the 'token'
         return created_user
 
     def verify_email(self, token: str) -> bool:
         """Checks cryptographic token boundaries and flags email ownership definitively."""
-        user = self.user_repo.model.query.filter_by(email_verification_token=token).first()
+        user = self.user_repo.find_by_verification_token(token)
         if not user:
             return False
             
@@ -114,7 +111,7 @@ class AuthService:
 
     def reset_password(self, token: str, new_password: str) -> bool:
         """Consumes the cryptographic link confirming reset access authority securely."""
-        user = self.user_repo.model.query.filter_by(email_verification_token=token).first()
+        user = self.user_repo.find_by_verification_token(token)
         if not user:
             return False
             

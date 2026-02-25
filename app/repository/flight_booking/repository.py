@@ -26,7 +26,7 @@ class FlightBookingRepository(BaseRepository[FlightBooking]):
     def find_by_pnr(self, pnr_reference: str) -> Optional[FlightBooking]:
         """Looks up a specific booking strictly by its airline-issued PNR code."""
         cln_pnr = normalize_pnr(pnr_reference)
-        return self.model.query.filter_by(pnr=cln_pnr).first()
+        return self.model.query.filter_by(pnr_reference=cln_pnr).first()
 
     @handle_db_exceptions
     def update_eticket_info(self, booking_id: str, eticket_number: str, ticket_url: str) -> Optional[FlightBooking]:
@@ -35,7 +35,29 @@ class FlightBookingRepository(BaseRepository[FlightBooking]):
         if not booking:
             return None
             
-        booking.eticket_number = eticket_number
         booking.ticket_url = ticket_url
         db.session.commit()
         return booking
+
+    @handle_db_exceptions
+    def add_flight_segments(self, flight_booking_id: str, segments_data: list) -> None:
+        """Appends raw flight segments natively onto a FlightBooking header."""
+        from app.models.flight_booking import Flight
+        
+        for segment_data in segments_data:
+            seg = Flight(
+                flight_booking_id=flight_booking_id,
+                carrier_code=segment_data.carrier_code,
+                flight_number=segment_data.flight_number,
+                departure_airport_code=segment_data.departure_airport_code,
+                arrival_airport_code=segment_data.arrival_airport_code,
+                departure_time=segment_data.departure_time,
+                arrival_time=segment_data.arrival_time,
+                duration_minutes=segment_data.duration_minutes,
+                aircraft_type=segment_data.aircraft_type,
+                baggage_allowance=segment_data.baggage_allowance,
+                terminal=segment_data.terminal,
+                gate=segment_data.gate
+            )
+            db.session.add(seg)
+        db.session.commit()

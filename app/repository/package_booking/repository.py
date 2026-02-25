@@ -39,3 +39,36 @@ class PackageBookingRepository(BaseRepository[PackageBooking]):
             PackageDeparture.departure_date > now,
             PackageDeparture.departure_date <= cutoff_date
         ).order_by(PackageDeparture.departure_date.asc()).all()
+
+    @handle_db_exceptions
+    def override_custom_itinerary(self, package_booking: PackageBooking, title: str, items: list):
+        from app.models.package_booking import CustomItinerary, CustomItineraryItem
+        from app.models.enums import ServiceType
+        
+        # Wipe old custom itinerary if overriding entirely
+        if package_booking.custom_itinerary:
+            db.session.delete(package_booking.custom_itinerary)
+            db.session.flush()
+            
+        custom_itin = CustomItinerary(
+            booking_id=package_booking.id,
+            title=title,
+            start_date=package_booking.start_date, # Inherit base bounds natively
+            end_date=package_booking.end_date
+        )
+        db.session.add(custom_itin)
+        db.session.flush()
+        
+        for idx, item in enumerate(items):
+            itin_item = CustomItineraryItem(
+                itinerary_id=custom_itin.id,
+                day_number=item.get("day_number", idx + 1),
+                title=item.get("title"),
+                description=item.get("description"),
+                location=item.get("location"),
+                type=item.get("type", ServiceType.ACTIVITY)
+            )
+            db.session.add(itin_item)
+            
+        db.session.commit()
+        return custom_itin

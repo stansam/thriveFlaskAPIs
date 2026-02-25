@@ -24,15 +24,9 @@ class PackageService:
         Dynamically constructs SQLAlchemy filter rules trapping duration windows
         and geographical nodes returning active packages natively.
         """
-        # Expose active packages securely stripping unpublished drafts
-        base_query = {"is_active": True}
-        
-        # Merge dynamic dictionary filters 
-        dynamic_filters = build_package_search_filters(filters)
-        base_query.update(dynamic_filters)
-        
-        # Note: In a fully fleshed repo, `find_by_kwargs` natively unpacks dicts
-        return self.package_repo.model.query.filter_by(**base_query).all()
+        # Convert DTO attributes dynamically
+        filters_dict = getattr(filters, "model_dump", lambda: getattr(filters, "dict", lambda: vars(filters))())()
+        return self.package_repo.search_packages(filters=filters_dict)
 
     def book_package(self, data: BookPackageDTO) -> PackageBooking:
         """
@@ -53,8 +47,6 @@ class PackageService:
         # Strict validation ensuring users don't book a 3-day window for a 10-day package
         validate_package_duration(data.start_date, data.end_date, package.duration_days)
 
-        from app.extensions import db
-        
         try:
             # 1. Base Booking
             booking_core = self.booking_repo.create({
@@ -62,7 +54,6 @@ class PackageService:
                 "status": BookingStatus.PENDING,
                 "company_id": user.company_id 
             }, commit=False)
-            db.session.flush()
 
             # 2. PackageBooking Context
             package_booking = self.package_booking_repo.create({
@@ -73,12 +64,10 @@ class PackageService:
                 "number_of_adults": data.number_of_adults,
                 "number_of_children": data.number_of_children,
                 "special_requests": data.special_requests
-            }, commit=False)
-            db.session.commit()
+            }, commit=True)
             return package_booking
 
         except Exception as e:
-            db.session.rollback()
             raise RuntimeError(f"Package booking transaction failed cleanly: {str(e)}")
 
     def customize_itinerary(self, package_booking_id: str, title: str, items: list) -> CustomItinerary:
@@ -90,32 +79,8 @@ class PackageService:
         if not package_booking:
             raise ValueError("Invalid package booking target.")
 
-        from app.extensions import db
-        
-        # Wipe old custom itinerary if overriding entirely
-        if package_booking.custom_itinerary:
-            db.session.delete(package_booking.custom_itinerary)
-            db.session.flush()
-            
-        custom_itin = CustomItinerary(
-            booking_id=package_booking.id,
+        return self.package_booking_repo.override_custom_itinerary(
+            package_booking=package_booking,
             title=title,
-            start_date=package_booking.start_date, # Inherit base bounds natively
-            end_date=package_booking.end_date
+            items=items
         )
-        db.session.add(custom_itin)
-        db.session.flush()
-        
-        for idx, item in enumerate(items):
-            itin_item = CustomItineraryItem(
-                itinerary_id=custom_itin.id,
-                day_number=item.get("day_number", idx + 1),
-                title=item.get("title"),
-                description=item.get("description"),
-                location=item.get("location"),
-                type=item.get("type", ServiceType.ACTIVITY)
-            )
-            db.session.add(itin_item)
-            
-        db.session.commit()
-        return custom_itin

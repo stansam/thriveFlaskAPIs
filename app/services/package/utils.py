@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Dict
 from app.dto.package.schemas import SearchPackageDTO
 
@@ -15,11 +15,21 @@ def build_package_search_filters(filters: SearchPackageDTO) -> Dict:
     # For kwargs filtering `.filter_by()`, we stick to exact matches for now.
     return clean_filters
 
-def validate_package_duration(start: date, end: date, required_days: int) -> None:
+def validate_package_duration(start, end, required_days: int) -> None:
     """
     Asserts exact matching bounds natively against the physical Package length stopping
     users from truncating or expanding package dates against the listed configurations implicitly.
     """
+    if isinstance(start, str):
+        start = datetime.fromisoformat(start).date()
+    elif hasattr(start, 'date'):
+        start = start.date()
+        
+    if isinstance(end, str):
+        end = datetime.fromisoformat(end).date()
+    elif hasattr(end, 'date'):
+        end = end.date()
+
     diff = (end - start).days
     
     # +1 because booking Monday through Wednesday implies 3 structural days of activity.

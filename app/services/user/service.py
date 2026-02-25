@@ -56,21 +56,7 @@ class UserService:
             return None
             
         prefs_dict = {k: v for k, v in prefs.__dict__.items() if v is not None}
-        
-        if not user.preferences:
-            # Create fresh preferences block if entirely absent initially
-            new_pref = UserPreference(user_id=user.id, **prefs_dict)
-            from app.extensions import db
-            db.session.add(new_pref)
-            db.session.commit()
-            return new_pref
-        else:
-            # Safely loop update explicit matches without clobbering existing unaffected keys natively
-            for key, val in prefs_dict.items():
-                setattr(user.preferences, key, val)
-            from app.extensions import db
-            db.session.commit()
-            return user.preferences
+        return self.user_repo.update_user_preferences(user.id, prefs_dict)
 
     def delete_account(self, user_id: str) -> bool:
         """

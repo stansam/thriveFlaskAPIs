@@ -28,9 +28,10 @@ class PaymentService:
         if not user:
             raise ValueError("Invalid user assigned to invoice request.")
 
+        from datetime import timedelta
         # Assign + 7 days strictly mimicking physical accounts receivable timelines
         issued = datetime.now(timezone.utc).date()
-        due = datetime.now(timezone.utc).replace(day=min(issued.day + 7, 28)).date() # Simplified addition
+        due = issued + timedelta(days=7)
 
         return self.invoice_repo.create({
             "user_id": user.id,
@@ -54,7 +55,7 @@ class PaymentService:
             raise ValueError("Target checkout booking does not exist.")
             
         # Optional: Grab explicit Invoice linked to Booking natively to match exact amount requirements
-        invoices = self.invoice_repo.model.query.filter_by(booking_id=booking.id).all()
+        invoices = self.invoice_repo.get_invoices_by_booking_id(booking.id)
         amount_due = sum(inv.total_amount for inv in invoices) if invoices else 0.0
         
         # Build the exact `Payment` transaction mimicking a stripe processing lock:
@@ -86,7 +87,7 @@ class PaymentService:
         
         if payload.status == PaymentStatus.COMPLETED:
              # Force underlying Invoices mappings closed explicitly natively
-             invoices = self.invoice_repo.model.query.filter_by(booking_id=payment.booking_id).all()
+             invoices = self.invoice_repo.get_invoices_by_booking_id(payment.booking_id)
              for inv in invoices:
                   self.invoice_repo.update(inv.id, {"status": InvoiceStatus.PAID}, commit=True)
                   

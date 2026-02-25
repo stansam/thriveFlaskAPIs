@@ -27,10 +27,37 @@ class UserRepository(BaseRepository[User]):
         return self.model.query.filter_by(company_id=company_id).all()
 
     @handle_db_exceptions
+    def find_by_verification_token(self, token: str) -> Optional[User]:
+        return self.model.query.filter_by(email_verification_token=token).first()
+
+    @handle_db_exceptions
+    def save_user(self, user: User) -> User:
+        """Saves a fully constructed User model directly, preserving instance states."""
+        db.session.add(user)
+        db.session.commit()
+        return user
+
+    @handle_db_exceptions
     def get_user_with_preferences(self, user_id: str) -> Optional[User]:
         return self.model.query.options(
             joinedload(self.model.preferences)
         ).filter_by(id=user_id).first()
+
+    @handle_db_exceptions
+    def update_user_preferences(self, user_id: str, prefs_dict: dict):
+        from app.models.user_preference import UserPreference
+        
+        user = self.get_by_id(user_id)
+        if not user.preferences:
+            new_pref = UserPreference(user_id=user.id, **prefs_dict)
+            db.session.add(new_pref)
+            db.session.commit()
+            return new_pref
+        else:
+            for key, val in prefs_dict.items():
+                setattr(user.preferences, key, val)
+            db.session.commit()
+            return user.preferences
 
     @handle_db_exceptions
     def count_active_users_by_role(self, role: UserRole) -> int:

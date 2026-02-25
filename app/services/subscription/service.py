@@ -52,15 +52,12 @@ class SubscriptionService:
             "auto_renew": True
         }
         
-        new_subscription = self.sub_repo.create(sub_data, commit=False)
+        new_subscription = self.sub_repo.create(sub_data, commit=True)
         
         # 5. Generate upfront Invoice cleanly binding back to the created `new_subscription` 
         # TODO: Route this through `PaymentService` or generate explicitly Native via Repo:
         invoice_desc = f"Initial Subscription Charge - {plan.name}"
-        # Triggering native payment interception flow internally:
-        from app.extensions import db
         # For simplicity, defer invoice emission details exactly to a later Payment module phase.
-        db.session.commit()
         
         return new_subscription
 

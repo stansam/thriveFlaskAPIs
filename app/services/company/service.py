@@ -47,10 +47,7 @@ class CompanyService:
             self.auth_service.register_user(admin_payload)
         except Exception as e:
             # Rollback the company entirely if the Admin setup failed (e.g., duplicated email)
-            from app.extensions import db
-            db.session.rollback()
-            self.company_repo.model.query.filter_by(id=company.id).delete()
-            db.session.commit()
+            self.company_repo.delete(company.id)
             raise ValueError(f"Company creation failed during admin initialization: {str(e)}")
 
         return company
