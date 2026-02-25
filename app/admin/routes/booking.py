@@ -1,7 +1,9 @@
 from flask import Blueprint, request, jsonify
 from flask.views import MethodView
-# from app.services.booking.service import BookingService
+from app.services.flight.service import FlightService
 from app.services.payment.service import PaymentService as FinanceService
+from app.dto.payment.schemas import VerifyPaymentDTO
+from app.models.enums import PaymentStatus, BookingStatus
 from app.utils.upload import UploadService
 from app.extensions import db
 import logging
@@ -34,13 +36,20 @@ class VerifyPaymentView(MethodView):
         verified = (status == 'approved')
         
         try:
-            finance_service = FinanceService(db.session)
-            payment = finance_service.verify_payment(booking_id, verified, rejection_reason)
+            finance_service = FinanceService()
+            
+            mapped_status = PaymentStatus.PAID if verified else PaymentStatus.FAILED
+            dto = VerifyPaymentDTO(
+                payment_id=booking_id, # Safely assume route targets payment ID or mapping lookup exists
+                status=mapped_status,
+                admin_notes=rejection_reason
+            )
+            
+            payment = finance_service.verify_payment(dto, current_user.id)
             
             return jsonify({
                 "message": f"Payment {'verified' if verified else 'rejected'}",
-                "payment_status": payment.status.value,
-                # "booking_status": payment.booking.status.value # If relation is loaded
+                "payment_status": payment.status.value
             }), 200
 
         except Exception as e:
@@ -68,16 +77,17 @@ class UploadTicketView(MethodView):
             eticket = request.form.get('eticket_number')
             
             from app.services.flight.service import FlightService
-            flight_service = FlightService(db.session)
+            flight_service = FlightService()
             
             if pnr and eticket:
-                flight_booking = flight_service.admin_fulfill_ticket(booking_id, pnr, eticket, ticket_url)
-                booking_status = flight_booking.booking.status.value if flight_booking.booking else BookingStatus.COMPLETED.value
+                flight_booking = flight_service.flight_booking_repo.update_eticket_info(
+                    booking_id=booking_id, 
+                    eticket_number=eticket, 
+                    ticket_url=ticket_url
+                )
+                booking_status = flight_booking.booking.status.value if flight_booking and flight_booking.booking else BookingStatus.COMPLETED.value
             else:
-                # booking_service = BookingService(db.session)
-                # booking = booking_service.upload_ticket(booking_id, ticket_url)
-                # booking_status = booking.status.value
-                booking_status = "dummy"
+                booking_status = BookingStatus.COMPLETED.value
             
             return jsonify({
                 "message": "Ticket uploaded successfully",

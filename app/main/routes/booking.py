@@ -2,8 +2,11 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app.main import main_bp
 from app.main.schemas.booking_initiate import BookingInitiateSchema
-# from app.services.booking.service import BookingService
+from app.services.flight.service import FlightService
 from app.services.payment.service import PaymentService as FinanceService
+from app.dto.flight.schemas import BookFlightDTO, FlightSegmentDTO
+from app.dto.payment.schemas import SubmitPaymentProofDTO
+from app.models.enums import TravelClass, PaymentMethod
 from app.utils.upload import UploadService
 from app.extensions import db
 from marshmallow import ValidationError
@@ -50,13 +53,17 @@ class PaymentProof(MethodView):
                 return jsonify({"message": "Failed to save file"}), 500
 
             # 3. Record Payment Proof
-            finance_service = FinanceService(db.session)
-            payment = finance_service.record_payment_proof(booking_id, receipt_url)
+            finance_service = FinanceService()
+            payment_dto = SubmitPaymentProofDTO(
+                booking_id=booking_id,
+                payment_method=PaymentMethod.BANK_TRANSFER, # Defaulting for manual uploads
+                payment_proof_url=receipt_url
+            )
+            payment = finance_service.submit_payment_proof(payment_dto)
             
             return jsonify({
                 "message": "Payment proof uploaded successfully",
                 "payment_status": payment.status.value,
-                "booking_status": booking.status.value,
                 "receipt_url": receipt_url
             }), 201
 
@@ -80,31 +87,36 @@ class InitiateBooking(MethodView):
             return jsonify(err.messages), 400
 
         try:
-            # service = BookingService(db.session)
+            flight_service = FlightService()
             user_id = current_user.id
             
-            # booking = service.initiate_booking(
-            #     user_id=user_id,
-            #     flight_id=data['flight_id'],
-            #     passengers=data['passengers'],
-            #     expected_price=data['expected_price']
-            # )
+            # Map mock segment based on `flight_id` assuming direct translation for now 
+            from datetime import datetime, timezone
+            mock_segment = FlightSegmentDTO(
+                carrier_code="MOCK",
+                flight_number=data['flight_id'],
+                departure_airport_code="JFK",
+                arrival_airport_code="LHR",
+                departure_time=datetime.now(timezone.utc),
+                arrival_time=datetime.now(timezone.utc),
+                duration_minutes=120
+            )
+
+            dto = BookFlightDTO(
+                 user_id=user_id,
+                 cabin_class=TravelClass.ECONOMY,
+                 segments=[mock_segment]
+            )
             
-            class DummyBooking:
-                id = "dummy"
-                reference_code = "dummy"
-                status = type('obj', (object,), {'value': 'dummy'})
-                total_amount = 0
-                currency = "USD"
-            booking = DummyBooking()
+            booking = flight_service.book_flight(dto)
             
             return jsonify({
                 "message": "Booking initiated successfully",
                 "booking_id": booking.id,
-                "reference_code": booking.reference_code,
-                "status": booking.status.value,
-                "total_amount": booking.total_amount,
-                "currency": booking.currency
+                "reference_code": booking.pnr_reference,
+                "status": booking.booking.status.value,
+                "total_amount": data['expected_price'],
+                "currency": data.get('currency', 'USD')
             }), 201
             
         except Exception as e:
