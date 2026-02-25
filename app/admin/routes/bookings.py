@@ -83,8 +83,9 @@ class VoidBookingView(MethodView):
              return jsonify({"error": "Booking completely unseen within bound graphs."}), 404
 
         try:
-             # TODO: Implement Booking cancellation routine mapped below internally natively
-             # booking_service.void_booking(booking_id, data['reason'])
+             # Physical Booking cancellation sequence unlocking map boundaries natively
+             flight_service = FlightService()
+             flight_service.void_booking(booking_id, data['reason'])
              
              log_audit(
                  action=AuditAction.DELETE,

@@ -82,3 +82,34 @@ class FlightService:
 
         except Exception as e:
             raise RuntimeError(f"Flight booking transaction failed cleanly: {str(e)}")
+
+    def void_booking(self, booking_id: str, reason: str) -> None:
+        """
+        Executes a transactional block reversing the physical booking mapping.
+        1. Cancels the generic overarching Booking state.
+        2. Frees any future segments releasing inventory locks (mocked or external).
+        """
+        try:
+            booking = self.booking_repo.get_by_id(booking_id)
+            if not booking:
+                raise ValueError("Booking explicitly unseen natively.")
+                
+            if booking.status == BookingStatus.CANCELLED:
+                raise ValueError("Booking already structurally Voided.")
+                
+            # 1. Base Booking Voiding
+            self.booking_repo.update(booking.id, {"status": BookingStatus.CANCELLED}, commit=False)
+            
+            # 2. FlightBooking Voiding & Inventory Release
+            # The relationship `booking.flight_booking` holds the native PNR context
+            if booking.flight_booking:
+                # In a live GDS environment, physical API triggers routing to Amadeus/Kayak
+                # would proactively release the PNR hold bounds here strictly.
+                # e.g., self.api_adapter.cancel_pnr(booking.flight_booking.pnr_reference)
+                pass
+                
+            # 3. Commit native block securely
+            self.booking_repo.db.session.commit()
+        except Exception as e:
+            self.booking_repo.db.session.rollback()
+            raise RuntimeError(f"Failed cancelling physical booking loop: {str(e)}")

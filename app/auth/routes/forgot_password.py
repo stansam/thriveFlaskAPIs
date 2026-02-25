@@ -24,29 +24,6 @@ class ForgotPassword(MethodView):
         auth_service.request_password_reset(data['email'])
         track_metric(metric_name="password_reset_requested", category="auth")
         
-        # In this workflow `AuthService` sets the token. We need the physical user context 
-        # to trigger the notification cleanly if found. 
-        # Since AuthService explicitly returns True always, we query the user quickly here 
-        # to assemble the link precisely for the immediate payload dispatch 
-        # (This avoids polluting AuthService with request parsing)
-        from app.repository import repositories
-        user = repositories.user.find_by_email(data['email'])
-        
-        if user and user.email_verification_token:
-             ns = NotificationService()
-             reset_link = f"{request.host_url}api/auth/reset-password?token={user.email_verification_token}"
-             try:
-                 ns.dispatch_notification(DispatchNotificationDTO(
-                     user_id=user.id,
-                     trigger_event="PASSWORD_RESET_REQUESTED",
-                     context={
-                         "first_name": user.first_name,
-                         "reset_link": reset_link
-                     }
-                 ))
-             except Exception as e:
-                 logger.error(f"Failed to dispatch password reset email bounded: {e}")
-
         # Always return generically masking the true internal hit evaluation.
         return jsonify({
             "message": "If that email is registered, you will receive a password reset link shortly."

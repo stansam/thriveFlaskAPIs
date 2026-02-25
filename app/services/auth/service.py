@@ -4,8 +4,13 @@ from flask_login import login_user
 from app.models.user import User
 from app.repository import repositories
 from app.dto.auth.schemas import LoginRequestDTO, RegisterRequestDTO
-from app.services.auth.utils import generate_secure_token
+from app.services.auth.utils import generate_secure_token, verify_secure_token
+from flask import request, current_app
+import logging
+from app.services.notification.service import NotificationService
+from app.dto.notification.schemas import DispatchNotificationDTO
 
+logger = logging.getLogger(__name__)
 class AuthService:
     """
     AuthService orchestrates the high-level business flows for user
@@ -42,7 +47,7 @@ class AuthService:
         if existing:
             raise ValueError("Email address already registered.")
             
-        token, expires_at = generate_secure_token(hours_valid=48)
+        token = generate_secure_token(data.email)
         
         user_dict = {
             "first_name": data.first_name,
@@ -53,8 +58,8 @@ class AuthService:
             "gender": data.gender,
             "locale": data.locale,
             "company_id": data.company_id,
-            "email_verification_token": token,
-            "email_verification_token_expires_at": expires_at,
+            "email_verification_token": None,
+            "email_verification_token_expires_at": None,
             "email_verified": False
         }
         
@@ -65,23 +70,38 @@ class AuthService:
         # Instruct repo to just append and commit the completely assembled object natively
         created_user = self.user_repo.save_user(user)
         
-        # TODO: Trigger email sending via NotificationService natively handing off the 'token'
+        try:
+            ns = NotificationService()
+            # Explicitly construct the verification URL bounding the token payload securely
+            verification_link = f"{request.host_url}api/auth/verify-email?token={token}"
+            ns.dispatch_notification(DispatchNotificationDTO(
+                user_id=created_user.id,
+                trigger_event="WELCOME_EMAIL",
+                context={
+                    "first_name": created_user.first_name,
+                    "verification_link": verification_link
+                }
+            ))
+        except Exception as e:
+            logger.error(f"Failed dispatching physical Welcome payload natively: {e}")
+            
         return created_user
 
     def verify_email(self, token: str) -> bool:
         """Checks cryptographic token boundaries and flags email ownership definitively."""
-        user = self.user_repo.find_by_verification_token(token)
+        email = verify_secure_token(token, max_age_seconds=48 * 3600)
+        if not email:
+            return False # Token invalid or lapsed natively
+            
+        user = self.user_repo.find_by_email(email)
         if not user:
             return False
-            
-        if user.email_verification_token_expires_at and user.email_verification_token_expires_at < datetime.now(timezone.utc):
-            return False # Token lapsed
             
         self.user_repo.update(
             user.id, 
             {
-                "email_verified": True, 
-                "email_verification_token": None, 
+                "email_verified": True,
+                "email_verification_token": None,
                 "email_verification_token_expires_at": None
             }, 
             commit=True
@@ -89,41 +109,46 @@ class AuthService:
         return True
 
     def request_password_reset(self, email: str) -> bool:
-        """Issues the highly sensitive temporary link sent out-of-band to user contacts."""
+        """Issues the highly sensitive temporary link sent out-of-band to user contacts cryptographically."""
         user = self.user_repo.find_by_email(email)
         if not user:
             # Silently return True returning no hints back to bad actors guessing random emails
             return True 
             
-        # Repurpose the verification token columns purely for the reset flow for now to save DB schema creep
-        token, expires_at = generate_secure_token(hours_valid=2)
-        self.user_repo.update(
-            user.id, 
-            {
-                "email_verification_token": token, 
-                "email_verification_token_expires_at": expires_at
-            }, 
-            commit=True
-        )
-        
-        # TODO: Dispatch the explicit password reset payload to NotificationService 
+        # Cryptographic link binding email payload dynamically. DB saves omitted permanently
+        token = generate_secure_token(user.email)
+        try:
+            ns = NotificationService()
+            reset_link = f"{request.host_url}api/auth/reset-password?token={token}"
+            ns.dispatch_notification(DispatchNotificationDTO(
+                user_id=user.id,
+                trigger_event="PASSWORD_RESET_REQUESTED",
+                context={
+                    "first_name": user.first_name,
+                    "reset_link": reset_link
+                }
+            ))
+        except Exception as e:
+            logger.error(f"Failed dispatching physical Password Reset natively: {e}")
+            
         return True
 
     def reset_password(self, token: str, new_password: str) -> bool:
         """Consumes the cryptographic link confirming reset access authority securely."""
-        user = self.user_repo.find_by_verification_token(token)
+        email = verify_secure_token(token, max_age_seconds=2 * 3600)
+        if not email:
+            return False # Token invalid or lapsed natively
+            
+        user = self.user_repo.find_by_email(email)
         if not user:
             return False
-            
-        if user.email_verification_token_expires_at and user.email_verification_token_expires_at < datetime.now(timezone.utc):
-            return False # Security envelope closed
             
         user.set_password(new_password)
         self.user_repo.update(
             user.id, 
             {
                 "password_hash": user.password_hash, # Updating the repo mapping strictly
-                "email_verification_token": None, 
+                "email_verification_token": None,
                 "email_verification_token_expires_at": None
             }, 
             commit=True
