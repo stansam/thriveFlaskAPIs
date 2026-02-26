@@ -2,11 +2,12 @@ from typing import Optional
 from datetime import datetime, timezone
 from app.models.payment import Invoice, Payment
 from app.models.booking import Booking
-from app.models.enums import PaymentStatus, InvoiceStatus
+from app.models.enums import PaymentStatus, InvoiceStatus, AuditAction, EntityType
 from app.repository import repositories
 from app.dto.payment.schemas import GenerateInvoiceDTO, SubmitPaymentProofDTO, VerifyPaymentDTO
 from app.services.payment.utils import generate_invoice_number
 from app.extensions import socketio
+from app.utils.audit_log import log_audit
 
 class PaymentService:
     """
@@ -81,10 +82,20 @@ class PaymentService:
         if not payment:
              raise ValueError("Payment transaction ledger record not found.")
              
-        # TODO: Safely write AuditLog bounds indicating `admin_user_id` executed this transition
+        old_status = payment.status.value
         
         updates_dict = {"status": payload.status}
         validated_payment = self.payment_repo.update(payment.id, updates_dict, commit=True)
+        
+        # Safely write AuditLog bounds indicating exactly which `admin_user_id` executed this transition
+        log_audit(
+            action=AuditAction.UPDATE,
+            entity_type=EntityType.PAYMENT,
+            entity_id=payment.id,
+            user_id=admin_user_id,
+            changes={"old_status": old_status, "new_status": payload.status.value},
+            description=f"Admin transitioned payment validation bound."
+        )
         
         if payload.status == PaymentStatus.COMPLETED:
              # Force underlying Invoices mappings closed explicitly natively

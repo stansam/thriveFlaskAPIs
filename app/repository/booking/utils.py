@@ -1,9 +1,9 @@
 import secrets
 import string
 
-def generate_reference(length: int = 8) -> str:
+def generate_reference(length: int = 6) -> str:
     """
-    Generates a cryptographically strong random alpha-numeric string.
+    Generates a cryptographically strong random alpha-numeric PNR string.
     Useful for creating unique tracking references for Bookings that 
     must resist collision.
     """
