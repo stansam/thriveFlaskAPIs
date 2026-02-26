@@ -5,7 +5,7 @@ from app.admin.routes.dashboard import DashboardView
 from app.admin.routes.payments import VerifyPaymentView
 from app.admin.routes.bookings import UploadTicketView, VoidBookingView
 from app.admin.routes.companies import CompanyListView, CompanyStatusView
-from app.admin.routes.packages import ManagePackageView
+from app.admin.routes.packages import ManagePackageView, PackageCSVUploadView
 from app.admin.routes.fees import ManageFeesView
 from app.admin.routes.audit import AuditLogView
 
@@ -33,6 +33,7 @@ ROUTES = [
     
     # Holiday Packages Inventory Setup
     {"url_rule": "/packages/manage", "view_func": ManagePackageView.as_view("manage_packages")},
+    {"url_rule": "/packages/upload", "view_func": PackageCSVUploadView.as_view("upload_packages")},
     
     # Compliance ledger mapping
     {"url_rule": "/audit", "view_func": AuditLogView.as_view("audit_logs")}

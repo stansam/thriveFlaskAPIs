@@ -37,7 +37,6 @@ class FlightService:
         adults: int = payload.passengers.adults if payload.passengers else 1
         page: int = payload.page 
         
-        # Pydantic model dump parsing
         gds_results = self.api_adapter.search_flights(
             origin=payload.origin,
             destination=payload.destination,

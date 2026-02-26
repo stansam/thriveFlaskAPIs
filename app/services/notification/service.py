@@ -1,10 +1,10 @@
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import logging
 from flask import current_app
+from dataclasses import asdict
 from app.repository import repositories
 from app.dto.notification.schemas import DispatchNotificationDTO, SendEmailDTO
 from app.services.notification.utils import compile_jinja_template
+from app.tasks.email_tasks import dispatch_async_email
 
 class NotificationService:
     """
@@ -52,35 +52,16 @@ class NotificationService:
 
     def send_email(self, payload: SendEmailDTO) -> bool:
         """
-        Abstracts purely the synchronous SMTP configuration binding directly
-        into the explicit Gmail host securely bypassing local mocking contexts.
+        Abstracts the email firing dropping the payload natively into the Background Worker
+        binding directly around the `@celery.task` dropping synchronous waits perfectly.
         """
-        smtp_server = current_app.config.get('MAIL_SERVER', 'smtp.gmail.com')
-        smtp_port = current_app.config.get('MAIL_PORT', 587)
-        smtp_user = current_app.config.get('MAIL_USERNAME')
-        smtp_password = current_app.config.get('MAIL_PASSWORD')
-        use_tls = current_app.config.get('MAIL_USE_TLS', True)
-
-        if not smtp_user or not smtp_password:
-             current_app.logger.warning("Notification bypass: SMTP credentials missing natively.")
-             return False
-
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = payload.subject
-        msg['From'] = f"Thrive Global Travel <{smtp_user}>"
-        msg['To'] = payload.to_email
-
-        # Attach explicit HTML content body payload natively
-        msg.attach(MIMEText(payload.body_html, 'html'))
-
+        # Dictionary format strictly passing to Redis safely
+        payload_dict = asdict(payload)
+        
         try:
-             server = smtplib.SMTP(smtp_server, smtp_port)
-             if use_tls:
-                  server.starttls()
-             server.login(smtp_user, smtp_password)
-             server.sendmail(smtp_user, payload.to_email, msg.as_string())
-             server.quit()
-             return True
+            # Drop the physical block offload onto background fabric identically
+            dispatch_async_email.delay(payload_dict)
+            return True
         except Exception as e:
-             current_app.logger.error(f"Failed SMTP proxy connection mapped bounds safely: {str(e)}")
-             return False
+            current_app.logger.error(f"Failed delegating SMTP payload physically across Celery boundaries: {str(e)}")
+            return False

@@ -6,6 +6,7 @@ from app.main.schemas.flights import FlightSearchSchema
 from app.services.flight.service import FlightService
 from app.dto.flight.schemas import SearchFlightDTO, PassengerQueryDTO
 from app.utils.analytics import track_metric
+from app.extensions import socketio
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,11 @@ class FlightSearchView(MethodView):
             results = flight_service.search_flights(search_payload)
             track_metric("flight_search_performed", category="main")
             
-            # TODO: Emit websocket hook logic indicating search footprint natively
+            # Emit websocket hook logic indicating search footprint natively
+            socketio.emit('flight_search_completed', {
+                'origin': data['origin'], 
+                'destination': data['destination']
+            })
             
             return jsonify({
                  "results": results

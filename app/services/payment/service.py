@@ -6,6 +6,7 @@ from app.models.enums import PaymentStatus, InvoiceStatus
 from app.repository import repositories
 from app.dto.payment.schemas import GenerateInvoiceDTO, SubmitPaymentProofDTO, VerifyPaymentDTO
 from app.services.payment.utils import generate_invoice_number
+from app.extensions import socketio
 
 class PaymentService:
     """
@@ -91,7 +92,10 @@ class PaymentService:
              for inv in invoices:
                   self.invoice_repo.update(inv.id, {"status": InvoiceStatus.PAID}, commit=True)
                   
-             # Force Booking fulfillment internally (Mock mapping towards `BookingService` eventually)
-             # E.g. trigger NotificationService("PAYMENT_SUCCESS") 
+             # Emit exact socket resolution bounds bypassing polling cleanly natively
+             socketio.emit('payment_verified', {
+                 'booking_id': payment.booking_id, 
+                 'status': 'COMPLETED'
+             })
              
         return validated_payment
