@@ -16,7 +16,6 @@ class PackageListView(MethodView):
             data = schema.load(request.args.to_dict())
         except ValidationError as err:
             return jsonify(err.messages), 400
-
         package_service = PackageService()
         payload = SearchPackageDTO(
             country=data.get('country'),
@@ -28,37 +27,26 @@ class PackageListView(MethodView):
              # Enforce pagination structurally
              limit = data['limit']
              offset = data['offset']
-             
              packages = package_service.search_packages(payload, limit=limit, offset=offset)
              track_metric("package_catalog_viewed", category="main")
-             
              return jsonify({
                  "packages": [p.to_dict() for p in packages]
              }), 200
         except Exception as e:
              return jsonify({"error": str(e)}), 400
 
-
 class PackageDetailView(MethodView):
     def get(self, slug):
         package_service = PackageService()
-        
-        from app.repository import repositories
-        package = repositories.package.find_by_slug(slug)
-        
+        package = package_service.find_by_slug(slug)
         if not package:
-             return jsonify({"error": "Package explicitly not found natively."}), 404
-             
+             return jsonify({"error": "Package explicitly not found natively."}), 404  
         track_metric("package_detail_viewed", category="main", dimension_key=slug)
         return jsonify(package.to_dict()), 200
 
 class FeaturedPackageListView(MethodView):
     def get(self):
         package_service = PackageService()
-        
-        from app.repository import repositories
-        # Assuming our repository has a method to fetch featured packages natively
-        featured_packages = repositories.package.get_featured_packages(limit=5)
-        
+        featured_packages = package_service.get_featured_packages()
         track_metric("featured_packages_viewed", category="main")
         return jsonify({"packages": [p.to_dict() for p in featured_packages]}), 200

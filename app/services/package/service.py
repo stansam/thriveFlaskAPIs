@@ -27,6 +27,12 @@ class PackageService:
         # Convert DTO attributes dynamically
         filters_dict = getattr(filters, "model_dump", lambda: getattr(filters, "dict", lambda: vars(filters))())()
         return self.package_repo.search_packages(filters=filters_dict)
+    
+    def get_featured_packages(self) -> List[Package]:
+        return self.package_repo.get_featured_packages()
+
+    def find_by_slug(self, slug: str) -> Optional[Package]:
+        return self.package_repo.find_by_slug(slug)
 
     def book_package(self, data: BookPackageDTO) -> PackageBooking:
         """

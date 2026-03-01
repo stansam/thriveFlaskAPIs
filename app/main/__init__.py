@@ -6,7 +6,7 @@ from app.main.routes.packages import PackageListView, PackageDetailView, Feature
 from app.main.routes.departures import DepartureListView
 from app.main.routes.pricing import PricingTierView
 from app.main.routes.contact import ContactView
-
+from app.main.routes.services import ServicesView
 # Per User instruction URL prefix should strictly be `/api` here explicitly decoupling Auth and Client boundaries natively.
 main_bp = Blueprint('main', __name__, url_prefix='/api')
 
@@ -25,6 +25,7 @@ ROUTES = [
     {"url_rule": "/departures", "view_func": DepartureListView.as_view("departure_slots")},
     
     # Global System & Contact info
+    {"url_rule": "/services", "view_func": ServicesView.as_view("services")},
     {"url_rule": "/pricing-tiers", "view_func": PricingTierView.as_view("pricing_tiers")},
     {"url_rule": "/contact", "view_func": ContactView.as_view("contact_inquiry")}
 ]

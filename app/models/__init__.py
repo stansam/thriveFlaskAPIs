@@ -13,3 +13,4 @@ from app.models.service_fee import ServiceFeeRule
 from app.models.notification import Notification, NotificationTemplate
 from app.models.analytics import AnalyticsMetric
 from app.models.audit_log import AuditLog
+from app.models.services import Service

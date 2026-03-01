@@ -4,6 +4,7 @@ from app.services.company.service import CompanyService
 from app.services.subscription.service import SubscriptionService
 from app.services.flight.service import FlightService
 from app.services.package.service import PackageService
+from app.services.service.service import ServicesService
 from app.services.payment.service import PaymentService
 from app.services.notification.service import NotificationService
 from app.services.analytics.service import AnalyticsService
@@ -23,6 +24,7 @@ class ServiceRegistry:
         self._flight = None
         self._package = None
         self._payment = None
+        self._service = None
         self._notification = None
         self._analytics = None
         self._audit = None
@@ -68,6 +70,12 @@ class ServiceRegistry:
         if not self._payment:
             self._payment = PaymentService()
         return self._payment
+    
+    @property
+    def service(self) -> ServicesService:
+        if not self._service:
+            self._service = ServicesService()
+        return self._service
 
     @property
     def notification(self) -> NotificationService:

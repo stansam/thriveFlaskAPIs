@@ -9,6 +9,7 @@ from app.repository.package_booking.repository import PackageBookingRepository
 from app.repository.invoice.repository import InvoiceRepository
 from app.repository.payment.repository import PaymentRepository
 from app.repository.passenger.repository import PassengerRepository
+from app.repository.service.repository import ServiceRepository
 from app.repository.service_fee.repository import ServiceFeeRepository
 from app.repository.audit_log.repository import AuditLogRepository
 from app.repository.notification.repository import NotificationRepository
@@ -32,6 +33,7 @@ class RepositoryRegistry:
         self._invoice = None
         self._payment = None
         self._passenger = None
+        self._service = None
         self._service_fee = None
         self._audit_log = None
         self._notification = None
@@ -102,7 +104,11 @@ class RepositoryRegistry:
         if not self._passenger:
             self._passenger = PassengerRepository()
         return self._passenger
-
+    @property
+    def service(self) -> ServiceRepository:
+        if not self._service:
+            self._service = ServiceRepository()
+        return self._service
     @property
     def service_fee(self) -> ServiceFeeRepository:
         if not self._service_fee:
@@ -127,5 +133,4 @@ class RepositoryRegistry:
             self._analytics = AnalyticsRepository()
         return self._analytics
 
-# Global singleton instance for the entire app to securely import
 repositories = RepositoryRegistry()
