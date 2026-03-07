@@ -1,6 +1,6 @@
 from app.extensions import db
 from app.models.base import BaseModel
-from app.models.enums import ActivityType
+from app.models.enums import ActivityType, OccupancyType
 
 class Package(BaseModel):
     __tablename__ = 'packages'
@@ -28,6 +28,45 @@ class Package(BaseModel):
     itineraries = db.relationship('PackageItinerary', backref='package', lazy='dynamic', cascade="all, delete-orphan")
     inclusions = db.relationship('PackageInclusion', backref='package', lazy='dynamic', cascade="all, delete-orphan")
     media = db.relationship("PackageMedia", cascade="all, delete-orphan")
+    departures = db.relationship('PackageDeparture', backref='package', lazy='dynamic', cascade="all, delete-orphan")
+    pricing_seasons = db.relationship('PackagePricingSeason', backref='package', lazy='dynamic', cascade="all, delete-orphan")
+    
+    def to_dict(self):
+        return {
+            "title": self.title,
+            "slug": self.slug,
+            "description": self.description,
+            "duration_nights": self.duration_nights,
+            "duration_days": self.duration_days,
+            "country": self.country,
+            "city": self.city,
+            "currency": self.currency,
+            "is_active": self.is_active,
+            "is_featured": self.is_featured,
+            "meta_title": self.meta_title,
+            "meta_description": self.meta_description,
+            "media": [
+                {
+                    "image_url": m.image_url,
+                    "is_featured": m.is_featured,
+                    "display_order": m.display_order
+                } for m in self.media
+            ],
+            "itineraries": [
+                {
+                    "day_number": i.day_number,
+                    "title": i.title,
+                    "description": i.description,
+                    "location": i.location
+                } for i in self.itineraries
+            ],
+            "inclusions": [
+                {
+                    "description": inc.description,
+                    "is_included": inc.is_included
+                } for inc in self.inclusions
+            ]
+        }
 
     def __repr__(self):
         return f"<Package {self.title} ({self.slug})>"

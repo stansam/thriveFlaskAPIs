@@ -1,5 +1,5 @@
 from app.models.base import BaseModel
-
+from app.extensions import db
 
 class Service(BaseModel):
     __tablename__ = "services"

@@ -19,14 +19,14 @@ class PackageService:
         self.booking_repo = repositories.booking
         self.user_repo = repositories.user
 
-    def search_packages(self, filters: SearchPackageDTO) -> List[Package]:
+    def search_packages(self, filters: SearchPackageDTO, limit:int = 50, offset:int = 0) -> List[Package]:
         """
         Dynamically constructs SQLAlchemy filter rules trapping duration windows
         and geographical nodes returning active packages natively.
         """
         # Convert DTO attributes dynamically
         filters_dict = getattr(filters, "model_dump", lambda: getattr(filters, "dict", lambda: vars(filters))())()
-        return self.package_repo.search_packages(filters=filters_dict)
+        return self.package_repo.search_packages(filters=filters_dict, limit=limit, offset=offset)
     
     def get_featured_packages(self) -> List[Package]:
         return self.package_repo.get_featured_packages()

@@ -1,6 +1,6 @@
 from typing import List
 from app.repository.registry import repositories
-from app.models.service import Service
+from app.models.services import Service
 
 class ServicesService:
     def __init__(self):

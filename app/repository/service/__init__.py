@@ -1,4 +1,4 @@
-from .repository import PassengerRepository
-from .utils import validate_passenger_payload
+from app.repository.service.repository import ServiceRepository
+from app.repository.service.utils import validate_service_payload
 
-__all__ = ["PassengerRepository", "validate_passenger_payload"]
+__all__ = ["ServiceRepository", "validate_service_payload"]

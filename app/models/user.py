@@ -95,6 +95,8 @@ class User(UserMixin, BaseModel):
             
         return sub.bookings_used_this_period < plan.booking_limit_count
     
+    def is_admin(self):
+        return True if self.role == UserRole.ADMIN else False
     
     def to_dict(self):
         sub = self.get_active_subscription()

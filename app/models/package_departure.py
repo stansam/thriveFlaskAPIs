@@ -9,7 +9,7 @@ class PackageDeparture(BaseModel):
         db.CheckConstraint('available_capacity >= 0', name='check_available_capacity_positive'),
     )
 
-    package_id = db.Column(db.String(36), db.ForeignKey("packages.id"))
+    package_id = db.Column(db.String(36), db.ForeignKey("packages.id", name="fk_package_departures_packages_id"))
 
     departure_date = db.Column(db.Date, index=True)
     return_date = db.Column(db.Date)

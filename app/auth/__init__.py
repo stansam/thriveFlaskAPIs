@@ -3,7 +3,6 @@ from app.extensions import login_manager
 from app.models import User
 from app.extensions import db
 
-# Import class-based views natively
 from app.auth.routes.login import Login
 from app.auth.routes.register import Register
 from app.auth.routes.verify_email import VerifyEmail
@@ -11,7 +10,7 @@ from app.auth.routes.forgot_password import ForgotPassword
 from app.auth.routes.reset_password import ResetPassword
 from app.auth.routes.logout import Logout
 from app.auth.routes.google import GoogleAuthorize, GoogleCallback
-
+from app.auth.routes.checks import IsAuthenticated, CurrentUserView
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
 @login_manager.user_loader
@@ -28,6 +27,9 @@ ROUTES = [
     {"url_rule": "/register", "view_func": Register.as_view("register")},
     {"url_rule": "/logout", "view_func": Logout.as_view("logout")},
     
+    {"url_rule": "/is-authenticated", "view_func": IsAuthenticated.as_view("is_authenticated")},
+    {"url_rule": "/me", "view_func": CurrentUserView.as_view("current_user")},
+
     # Verification & Recovery
     {"url_rule": "/verify-email", "view_func": VerifyEmail.as_view("verify_email")},
     {"url_rule": "/forgot-password", "view_func": ForgotPassword.as_view("forgot_password")},

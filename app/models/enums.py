@@ -142,3 +142,10 @@ class PackageDepartureStatus(BaseEnum):
     OPEN = "open"
     CLOSED = "closed"
     SOLD_OUT = "sold_out"
+
+class OccupancyType(BaseEnum):
+    SINGLE = "single"
+    DOUBLE = "double"
+    TRIPLE = "triple"
+    QUAD = "quad"
+    SUITE = "suite"

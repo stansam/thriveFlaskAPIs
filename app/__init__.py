@@ -20,9 +20,11 @@ def create_app(config_name=os.environ.get("FLASK_ENV", "development")) -> Flask:
     
     # Initialize explicit Telemetry websockets dynamically targeting Redis streams
     socketio.init_app(app, cors_allowed_origins="*", message_queue=app.config.get('CELERY_BROKER_URL'))
+    register_blueprints(app)
     
     # Register physical socket hook definitions bounds natively
-    import app.sockets.events
     
-    register_blueprints(app)
     return app
+
+import app.sockets.events
+

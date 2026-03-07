@@ -1,6 +1,6 @@
 from typing import List
 from app.extensions import db
-from app.models.service import Service
+from app.models.services import Service
 from app.repository.base.repository import BaseRepository
 from app.repository.base.utils import handle_db_exceptions
 from app.repository.service.utils import validate_service_payload
