@@ -18,19 +18,33 @@ class PackageListView(MethodView):
             return jsonify(err.messages), 400
         package_service = PackageService()
         payload = SearchPackageDTO(
+            q=data.get('q'),
             country=data.get('country'),
-            duration_days_min=data.get('duration_days_min'),
-            duration_days_max=data.get('duration_days_max')
+            min_price=data.get('min_price'),
+            max_price=data.get('max_price'),
+            min_days=data.get('min_days'),
+            max_days=data.get('max_days')
         )
         
         try:
              # Enforce pagination structurally
              limit = data['limit']
              offset = data['offset']
-             packages = package_service.search_packages(payload, limit=limit, offset=offset)
+             packages, total = package_service.search_packages(payload, limit=limit, offset=offset)
+             
+             total_pages = (total + limit - 1) // limit if limit > 0 else 1
+             current_page = (offset // limit) + 1 if limit > 0 else 1
+             
              track_metric("package_catalog_viewed", category="main")
              return jsonify({
-                 "packages": [p.to_dict() for p in packages]
+                 "packages": [p.to_dict() for p in packages],
+                 "pagination": {
+                     "total": total,
+                     "limit": limit,
+                     "offset": offset,
+                     "total_pages": total_pages,
+                     "current_page": current_page
+                 }
              }), 200
         except Exception as e:
              return jsonify({"error": str(e)}), 400

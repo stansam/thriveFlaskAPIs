@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from datetime import datetime
 from app.models.package import Package
 from app.models.package_booking import PackageBooking, CustomItinerary, CustomItineraryItem
@@ -6,7 +6,6 @@ from app.models.enums import BookingStatus, ServiceType
 from app.repository import repositories
 from app.dto.package.schemas import SearchPackageDTO, BookPackageDTO
 from app.services.package.utils import build_package_search_filters, validate_package_duration
-
 class PackageService:
     """
     PackageService manages pre-configured holiday logic explicitly bounding dates,
@@ -19,7 +18,7 @@ class PackageService:
         self.booking_repo = repositories.booking
         self.user_repo = repositories.user
 
-    def search_packages(self, filters: SearchPackageDTO, limit:int = 50, offset:int = 0) -> List[Package]:
+    def search_packages(self, filters: SearchPackageDTO, limit:int = 50, offset:int = 0) -> Tuple[List[Package], int]:
         """
         Dynamically constructs SQLAlchemy filter rules trapping duration windows
         and geographical nodes returning active packages natively.

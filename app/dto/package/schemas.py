@@ -4,9 +4,12 @@ from datetime import date
 
 @dataclass
 class SearchPackageDTO:
+    q: Optional[str] = None
     country: Optional[str] = None
-    duration_days_min: Optional[int] = None
-    duration_days_max: Optional[int] = None
+    min_price: Optional[float] = None
+    max_price: Optional[float] = None
+    min_days: Optional[int] = None
+    max_days: Optional[int] = None
 
 @dataclass
 class BookPackageDTO:
