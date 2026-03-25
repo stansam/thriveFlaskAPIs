@@ -1,16 +1,59 @@
-from app.models.base import BaseModel
-from app.models.user import User
-from app.models.company import Company
-from app.models.user_preference import UserPreference
-from app.models.booking import Booking, BookingLineItem
-from app.models.passenger import Passenger
-from app.models.flight_booking import FlightBooking, Flight
-from app.models.package import Package, PackageItinerary, PackageInclusion, PackageMedia
-from app.models.package_price import PackagePricingSeason, PackagePricing
-from app.models.package_booking import PackageBooking, CustomItinerary, CustomItineraryItem
-from app.models.payment import Payment, Invoice, SubscriptionPlan, UserSubscription
-from app.models.service_fee import ServiceFeeRule
-from app.models.notification import Notification, NotificationTemplate
-from app.models.analytics import AnalyticsMetric
-from app.models.audit_log import AuditLog
-from app.models.services import Service
+# models/__init__.py
+from .base import db, AuditMixin
+from .user import User
+from .client import Client
+from .corporate import CorporateAccount, CorporateSubscription
+from .media import MediaAsset
+from .package_media import PackageMedia
+from .user_preference import UserPreference
+from .client_preference import ClientPreference
+from .notification import Notification
+from .notification_delivery import NotificationDelivery
+from .notification_template import NotificationTemplate
+from .package import TravelPackage
+from .package_items import PackageHighlight, PackageInclusion, PackageItineraryDay
+from .package_price_tier import PackagePriceTier
+from .booking import Booking
+from .booking_passenger import  BookingPassenger
+from .flight_booking import FlightBooking, FlightSegment
+from .hotel_booking import HotelBooking 
+from .car_booking import CarBooking 
+from .package_booking import PackageBooking
+from .fee import ServiceFee
+from .fee_schedule import ServiceFeeSchedule
+from .fee_snapshot import ServiceFeeSnapshot 
+from .payment import Payment
+from .referral import Referral
+from .loyalty import LoyaltyLedger
+from .audit import AuditLog
+
+__all__ = [
+    "db", "AuditMixin",
+    "User",
+    "Client",
+    "CorporateAccount",
+    "CorporateSubscription",
+    "MediaAsset",
+    "PackageMedia",
+    "UserPreference",
+    "ClientPreference",
+    "Notification",
+    "NotificationDelivery",
+    "NotificationTemplate",
+    "TravelPackage",
+    "PackageHighlight", "PackageInclusion", "PackageItineraryDay",
+    "PackagePriceTier",
+    "Booking",
+    "BookingPassenger",
+    "FlightBooking", "FlightSegment",
+    "HotelBooking",
+    "CarBooking",
+    "PackageBooking",
+    "ServiceFee",
+    "ServiceFeeSchedule",
+    "ServiceFeeSnapshot",
+    "Payment",
+    "Referral",
+    "LoyaltyLedger",
+    "AuditLog",
+]

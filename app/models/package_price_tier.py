@@ -1,0 +1,59 @@
+from decimal import Decimal
+from typing import TYPE_CHECKING
+
+from sqlalchemy import (
+    Boolean, ForeignKey, Numeric, SmallInteger, String,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from .base import AuditMixin, db
+
+if TYPE_CHECKING:
+    from .package import TravelPackage
+
+class PackagePriceTier(db.Model, AuditMixin):
+    """
+    One pricing band for a TravelPackage.
+
+    Allows the same package to advertise:
+      • $1,899 pp (solo)
+      • $1,699 pp (2 people)
+      • $1,499 pp (group of 6+)
+      • +$500 pp (add flights)
+
+    `min_participants` / `max_participants` define the band.
+    `add_on_label` is a short descriptor (e.g. "Add flights").
+    """
+
+    __tablename__ = "package_price_tiers"
+
+    package_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("travel_packages.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    label: Mapped[str] = mapped_column(
+        String(100), nullable=False,
+        doc='e.g. "Solo", "Couple", "Group (6+)", "Add Flights"',
+    )
+    price_usd: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    price_per: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="person"
+    )
+    min_participants: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
+    max_participants: Mapped[int | None] = mapped_column(
+        SmallInteger, nullable=True, doc="NULL = no upper bound."
+    )
+    is_add_on: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False,
+        doc="True for optional add-ons like flights or insurance.",
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    package: Mapped["TravelPackage"] = relationship(
+        "TravelPackage", back_populates="price_tiers"
+    )
+
+    def __repr__(self) -> str:
+        return f"<PackagePriceTier {self.label} ${self.price_usd}>"

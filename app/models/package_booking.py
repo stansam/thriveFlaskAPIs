@@ -1,57 +1,85 @@
-from app.extensions import db
-from app.models.base import BaseModel
-from app.models.enums import ServiceType
+from decimal import Decimal
+from typing import TYPE_CHECKING
 
-class PackageBooking(BaseModel):
-    __tablename__ = 'package_bookings'
-    
-    booking_id = db.Column(db.String(36), db.ForeignKey('bookings.id'), nullable=False)
-    package_id = db.Column(db.String(36), db.ForeignKey('packages.id'), nullable=True) 
-    departure_id = db.Column(db.String(36), db.ForeignKey('package_departures.id'), nullable=True) # Enables physical slot tracking
-    
-    start_date = db.Column(db.Date, nullable=False)
-    end_date = db.Column(db.Date, nullable=False)
-    
-    number_of_adults = db.Column(db.Integer, default=1)
-    number_of_children = db.Column(db.Integer, default=0)
-    
-    special_requests = db.Column(db.Text)
-    
-    custom_itinerary = db.relationship('CustomItinerary', backref='package_booking', uselist=False, cascade="all, delete-orphan")
+from sqlalchemy import (
+    Boolean, Date, ForeignKey, Numeric,
+    SmallInteger, String, Text,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-    def __repr__(self):
-        return f"<PackageBooking {self.id} for Booking {self.booking_id}>"
+from app.enums import BookingServiceType
 
+if TYPE_CHECKING:
+    from .package import TravelPackage
 
-class CustomItinerary(BaseModel):
-    __tablename__ = 'custom_itineraries'
-    
-    booking_id = db.Column(db.String(36), db.ForeignKey('package_bookings.id'), nullable=False)
-    title = db.Column(db.String(100), default="Custom Itinerary")
-    start_date = db.Column(db.Date) 
-    end_date = db.Column(db.Date)
-    
-    notes = db.Column(db.Text)
-    approved_by_user = db.Column(db.Boolean, default=False)
-    
-    items = db.relationship('CustomItineraryItem', backref='custom_itinerary', lazy='dynamic', cascade="all, delete-orphan")
+class PackageBooking(Booking):
+    """
+    Links a Booking to a TravelPackage catalogue entry.
 
-    def __repr__(self):
-        return f"<CustomItinerary {self.title}>"
+    `selected_price_tier_id` records exactly which pricing tier was
+    applied at the time of booking (prices may change later).
+    `add_flights` flags whether the client opted to include flights —
+    which will also create a linked FlightBooking.
+    `linked_flight_booking_id` allows the package booking to reference
+    its companion flight booking.
+    `travel_date` is the trip departure date.
+    """
 
+    __tablename__ = "package_bookings"
+    __mapper_args__ = {"polymorphic_identity": BookingServiceType.PACKAGE}
 
-class CustomItineraryItem(BaseModel):
-    __tablename__ = 'custom_itinerary_items'
-    
-    itinerary_id = db.Column(db.String(36), db.ForeignKey('custom_itineraries.id'), nullable=False)
-    day_number = db.Column(db.Integer)
-    time = db.Column(db.Time)
-    title = db.Column(db.String(100))
-    description = db.Column(db.Text)
-    location = db.Column(db.String(100))
-    type = db.Column(db.Enum(ServiceType), default=ServiceType.ACTIVITY)
-    reference_id = db.Column(db.String(36))
-    cost = db.Column(db.Float)
+    id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("bookings.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
 
-    def __repr__(self):
-        return f"<CustomItineraryItem {self.title} ({self.type})>"
+    package_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("travel_packages.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    selected_price_tier_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("package_price_tiers.id", ondelete="SET NULL"),
+        nullable=True,
+        doc="The tier locked in at booking time.",
+    )
+    num_participants: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=1
+    )
+    travel_date: Mapped[Date] = mapped_column(Date, nullable=False)
+    return_date: Mapped[Date | None] = mapped_column(Date, nullable=True)
+    add_flights: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False,
+        doc="Client opted-in to add flights to the package.",
+    )
+    add_insurance: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False,
+    )
+    linked_flight_booking_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("flight_bookings.id", ondelete="SET NULL"),
+        nullable=True,
+        doc="Optional companion FlightBooking when add_flights=True.",
+    )
+    price_per_person_usd: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2), nullable=False,
+        doc="Per-person price locked in at booking time.",
+    )
+    total_package_cost_usd: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2), nullable=False,
+        doc="price_per_person × num_participants (informational).",
+    )
+    customisation_notes: Mapped[str | None] = mapped_column(
+        Text, nullable=True,
+        doc="Any bespoke adjustments requested by the client.",
+    )
+
+    package: Mapped["TravelPackage"] = relationship(
+        "TravelPackage", back_populates="bookings"
+    )
+
+    def __repr__(self) -> str:
+        return f"<PackageBooking {self.reference_number} pkg={self.package_id}>"

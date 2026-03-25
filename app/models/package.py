@@ -1,105 +1,184 @@
-from app.extensions import db
-from app.models.base import BaseModel
-from app.models.enums import ActivityType, OccupancyType
+# models/package.py
+"""
+Travel & Tours Package models.
 
-class Package(BaseModel):
-    __tablename__ = 'packages'
-    
-    title = db.Column(db.String(100), nullable=False)
-    slug = db.Column(db.String(120), unique=True, index=True)
-    
-    description = db.Column(db.Text)
-    highlights = db.Column(db.JSON)
-    
-    duration_nights = db.Column(db.Integer, nullable=False)
-    duration_days = db.Column(db.Integer, nullable=False)
+Domain objects
+--------------
+TravelPackage          — the catalogue entry (e.g. "Dubai Luxury Escape")
+PackagePriceTier       — price variants (solo / couple / group / add-flight)
+PackageHighlight       — bullet-point highlights shown on the listing card
+PackageInclusion       — included / excluded items (hotel, flights, insurance…)
+PackageItineraryDay    — day-by-day programme (Day 1: Desert Safari + BBQ…)
 
-    country = db.Column(db.String(100))
-    city = db.Column(db.String(100))
+Design decisions
+----------------
+1.  `TravelPackage` is the aggregate root.  All child tables are hard-deleted
+    when the parent is deleted (CASCADE).
 
-    currency = db.Column(db.String(3), default='USD')
-    
-    is_active = db.Column(db.Boolean, default=True)
-    is_featured = db.Column(db.Boolean, default=False)
-    
-    meta_title = db.Column(db.String(200))
-    meta_description = db.Column(db.Text)
-    
-    itineraries = db.relationship('PackageItinerary', backref='package', lazy='dynamic', cascade="all, delete-orphan")
-    inclusions = db.relationship('PackageInclusion', backref='package', lazy='dynamic', cascade="all, delete-orphan")
-    media = db.relationship("PackageMedia", cascade="all, delete-orphan")
-    departures = db.relationship('PackageDeparture', backref='package', lazy='dynamic', cascade="all, delete-orphan")
-    pricing_seasons = db.relationship('PackagePricingSeason', backref='package', lazy='dynamic', cascade="all, delete-orphan")
-    
-    def to_dict(self):
-        return {
-            "title": self.title,
-            "slug": self.slug,
-            "description": self.description,
-            "duration_nights": self.duration_nights,
-            "duration_days": self.duration_days,
-            "country": self.country,
-            "city": self.city,
-            "currency": self.currency,
-            "is_active": self.is_active,
-            "is_featured": self.is_featured,
-            "meta_title": self.meta_title,
-            "meta_description": self.meta_description,
-            "media": [
-                {
-                    "image_url": m.image_url,
-                    "is_featured": m.is_featured,
-                    "display_order": m.display_order
-                } for m in self.media
-            ],
-            "itineraries": [
-                {
-                    "day_number": i.day_number,
-                    "title": i.title,
-                    "description": i.description,
-                    "location": i.location
-                } for i in self.itineraries
-            ],
-            "inclusions": [
-                {
-                    "description": inc.description,
-                    "is_included": inc.is_included
-                } for inc in self.inclusions
-            ]
-        }
+2.  Pricing is normalised into `PackagePriceTier` so the same package can
+    offer e.g. "from $1,899 solo" and "from $1,599 pp for group of 6+".
 
-    def __repr__(self):
-        return f"<Package {self.title} ({self.slug})>"
+3.  `PackageInclusion` uses an `InclusionType` enum (INCLUDED / EXCLUDED /
+    OPTIONAL) matching the ✔ / ✘ / ✨ business language in the business plan.
 
+4.  `PackageItineraryDay` stores one row per day, supporting rich per-day
+    descriptions, activity lists, and optional meal flags.
 
-class PackageItinerary(BaseModel):
-    __tablename__ = 'package_itineraries'
-    
-    package_id = db.Column(db.String(36), db.ForeignKey('packages.id'), nullable=False)
-    day_number = db.Column(db.Integer, nullable=False)
-    title = db.Column(db.String(100))
-    description = db.Column(db.Text)
-    location = db.Column(db.String(100))
-    # activity_type = db.Column(db.Enum(ActivityType))
+5.  `display_order` columns on child tables control front-end sort order
+    without requiring re-inserts.
+"""
 
-    def __repr__(self):
-        return f"<PackageItinerary Day {self.day_number} - {self.title}>"
+from decimal import Decimal
+from typing import TYPE_CHECKING
 
+from sqlalchemy import (
+    Boolean, Enum, Numeric, SmallInteger, String, Text,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-class PackageInclusion(BaseModel):
-    __tablename__ = 'package_inclusions'
-    
-    package_id = db.Column(db.String(36), db.ForeignKey('packages.id'), nullable=False)
-    description = db.Column(db.String(255), nullable=False)
-    is_included = db.Column(db.Boolean, default=True) 
+from .base import AuditMixin, db
+from app.enums import PackageStatus
 
-    def __repr__(self):
-        return f"<PackageInclusion {self.description}>"
+if TYPE_CHECKING:
+    from .booking import PackageBooking
 
-class PackageMedia(BaseModel):
-    __tablename__ = "package_media"
+class TravelPackage(db.Model, AuditMixin):
+    """
+    Master catalogue entry for a travel package.
 
-    package_id = db.Column(db.String(36), db.ForeignKey("packages.id"))
-    image_url = db.Column(db.String(255))
-    is_featured = db.Column(db.Boolean, default=False)
-    display_order = db.Column(db.Integer)
+    Example: Dubai Luxury Escape — 5 Days / 4 Nights, from $1,899 pp.
+
+    `slug` is a URL-safe identifier generated from the title, used in
+    marketing URLs.  It must be unique across active packages.
+
+    `destination_country` / `destination_city` support future filtering
+    (e.g. "Show me all packages in Europe").
+
+    `min_participants` / `max_participants` gate group-size validation
+    at booking time.
+
+    `flights_includable` flags whether the "Flights can be added"
+    option exists, triggering a FlightBooking to be attached.
+    """
+
+    __tablename__ = "travel_packages"
+
+    # Identity & copy
+    title: Mapped[str] = mapped_column(
+        String(300), nullable=False, doc='e.g. "Dubai Luxury Escape"'
+    )
+    slug: Mapped[str] = mapped_column(
+        String(320), unique=True, nullable=False, index=True,
+        doc="URL-safe version of the title.",
+    )
+    tagline: Mapped[str | None] = mapped_column(
+        String(500), nullable=True,
+        doc='Short marketing line, e.g. "Yacht Cruise • Desert Safari • Burj Khalifa"',
+    )
+    description: Mapped[str | None] = mapped_column(
+        Text, nullable=True, doc="Full rich-text description (HTML/Markdown)."
+    )
+    status: Mapped[PackageStatus] = mapped_column(
+        Enum(PackageStatus, name="package_status_enum"),
+        nullable=False,
+        default=PackageStatus.DRAFT,
+        index=True,
+    )
+
+    # Destination
+    destination_country: Mapped[str] = mapped_column(String(100), nullable=False)
+    destination_city: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    region: Mapped[str | None] = mapped_column(
+        String(100), nullable=True,
+        doc='e.g. "Middle East", "Southeast Asia" — for front-end filtering.',
+    )
+
+    # Duration
+    duration_days: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, doc="Number of days (e.g. 5)."
+    )
+    duration_nights: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, doc="Number of nights (e.g. 4)."
+    )
+
+    # Pricing anchor (lowest advertised price for marketing display)
+    base_price_usd: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2),
+        nullable=False,
+        doc='The "from $X" price shown on listing cards.',
+    )
+    price_per: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        default="person",
+        doc='"person", "couple", "group" — qualifies base_price_usd.',
+    )
+
+    # Participant constraints
+    min_participants: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=1
+    )
+    max_participants: Mapped[int | None] = mapped_column(
+        SmallInteger, nullable=True, doc="NULL = no cap."
+    )
+
+    # Flags
+    flights_includable: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False,
+        doc="Whether flights can be added to this package.",
+    )
+    insurance_includable: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False,
+        doc="Whether travel insurance can be added.",
+    )
+    is_featured: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False,
+        doc="Pinned to homepage / featured section.",
+    )
+
+    # Media
+    cover_image_url: Mapped[str | None] = mapped_column(
+        String(2048), nullable=True, doc="CDN URL for the hero image."
+    )
+    gallery_urls: Mapped[str | None] = mapped_column(
+        Text, nullable=True,
+        doc="JSON array of CDN image URLs for the gallery carousel.",
+    )
+
+    # Relationships
+    highlights: Mapped[list["PackageHighlight"]] = relationship(
+        "PackageHighlight",
+        back_populates="package",
+        cascade="all, delete-orphan",
+        order_by="PackageHighlight.display_order",
+        lazy="selectin",
+    )
+    inclusions: Mapped[list["PackageInclusion"]] = relationship(
+        "PackageInclusion",
+        back_populates="package",
+        cascade="all, delete-orphan",
+        order_by="PackageInclusion.inclusion_type, PackageInclusion.display_order",
+        lazy="selectin",
+    )
+    itinerary_days: Mapped[list["PackageItineraryDay"]] = relationship(
+        "PackageItineraryDay",
+        back_populates="package",
+        cascade="all, delete-orphan",
+        order_by="PackageItineraryDay.day_number",
+        lazy="selectin",
+    )
+    price_tiers: Mapped[list["PackagePriceTier"]] = relationship(
+        "PackagePriceTier",
+        back_populates="package",
+        cascade="all, delete-orphan",
+        order_by="PackagePriceTier.min_participants",
+        lazy="selectin",
+    )
+    bookings: Mapped[list["PackageBooking"]] = relationship(
+        "PackageBooking",
+        back_populates="package",
+        lazy="dynamic",
+    )
+
+    def __repr__(self) -> str:
+        return f"<TravelPackage {self.title!r} [{self.status.value}]>"

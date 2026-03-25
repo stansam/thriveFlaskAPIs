@@ -1,85 +1,77 @@
-from app.extensions import db
-from app.models.base import BaseModel
-from app.models.enums import PaymentStatus, PaymentMethod, SubscriptionTier, InvoiceStatus, SubscriptionStatus
+# models/payment.py
+"""
+Payment model.
 
-class Payment(BaseModel):
-    __tablename__ = 'payments'
-    
-    booking_id = db.Column(db.String(36), db.ForeignKey('bookings.id'), nullable=False)
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False) 
-    
-    amount = db.Column(db.Float, nullable=False)
-    currency = db.Column(db.String(3), default='USD')
-    
-    payment_method = db.Column(db.Enum(PaymentMethod), nullable=False)
-    transaction_id = db.Column(db.String(100), unique=True) 
-    
-    status = db.Column(db.Enum(PaymentStatus), default=PaymentStatus.PENDING)
-    payment_date = db.Column(db.DateTime)
-    receipt_url = db.Column(db.String(255))
-    payment_proof_url = db.Column(db.String(255))
+Payments are recorded manually — no live payment gateway.
+The admin confirms receipt and logs the transaction here.
 
-    def __repr__(self):
-        return f"<Payment {self.id} - {self.amount} {self.currency} ({self.status})>"
+A booking can accumulate multiple Payment rows:
+  - Deposit + balance split
+  - Partial refund after cancellation
+  - Currency conversion variants
 
+`payment_proof_url` stores a CDN link to an uploaded screenshot / bank
+confirmation that the admin attaches as evidence of receipt.
+"""
 
-class Invoice(BaseModel):
-    __tablename__ = 'invoices'
-    
-    booking_id = db.Column(db.String(36), db.ForeignKey('bookings.id'), nullable=True)
-    subscription_id = db.Column(db.String(36), db.ForeignKey('user_subscriptions.id'), nullable=True)
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
-    
-    invoice_number = db.Column(db.String(50), unique=True, nullable=False)
-    
-    issued_date = db.Column(db.Date, nullable=False)
-    due_date = db.Column(db.Date, nullable=False)
-    
-    total_amount = db.Column(db.Float, nullable=False)
-    currency = db.Column(db.String(3), default='USD')
-    
-    pdf_url = db.Column(db.String(255))
-    status = db.Column(db.Enum(InvoiceStatus), default=InvoiceStatus.ISSUED)
+from decimal import Decimal
+from typing import TYPE_CHECKING
 
-    def __repr__(self):
-        return f"<Invoice {self.invoice_number} - {self.total_amount} {self.currency}>"
+from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from .base import AuditMixin, db
+from app.enums import PaymentStatus, PaymentMethod
 
-class SubscriptionPlan(BaseModel):
-    __tablename__ = 'subscription_plans'
-    
-    name = db.Column(db.String(50), nullable=False) 
-    tier = db.Column(db.Enum(SubscriptionTier), unique=True, nullable=False)
-    
-    price_monthly = db.Column(db.Float, nullable=False)
-    currency = db.Column(db.String(3), default='USD')
-    
-    booking_limit_count = db.Column(db.Integer, default=0) 
-    fee_waiver_rules = db.Column(db.JSON) 
-    
-    is_active = db.Column(db.Boolean, default=True)
+if TYPE_CHECKING:
+    from .booking import Booking
 
-    def __repr__(self):
-        return f"<SubscriptionPlan {self.name} ({self.tier})>"
+class Payment(db.Model, AuditMixin):
+    """
+    A single payment event against a Booking.
+    """
 
+    __tablename__ = "payments"
 
-class UserSubscription(BaseModel):
-    __tablename__ = 'user_subscriptions'
-    
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=True)
-    company_id = db.Column(db.String(36), db.ForeignKey('companies.id'), nullable=True) 
-    
-    plan_id = db.Column(db.String(36), db.ForeignKey('subscription_plans.id'), nullable=False)
-    
-    status = db.Column(db.Enum(SubscriptionStatus), default=SubscriptionStatus.ACTIVE)
-    
-    current_period_start = db.Column(db.DateTime, nullable=False)
-    current_period_end = db.Column(db.DateTime, nullable=False)
-    
-    bookings_used_this_period = db.Column(db.Integer, default=0)
-    auto_renew = db.Column(db.Boolean, default=True)
+    booking_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("bookings.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    amount_usd: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="USD")
+    exchange_rate: Mapped[Decimal | None] = mapped_column(
+        Numeric(12, 6), nullable=True,
+        doc="FX rate used for currency → USD conversion. NULL if USD.",
+    )
+    method: Mapped[PaymentMethod] = mapped_column(
+        Enum(PaymentMethod, name="payment_method_enum"), nullable=False,
+    )
+    status: Mapped[PaymentStatus] = mapped_column(
+        Enum(PaymentStatus, name="payment_status_enum"),
+        nullable=False,
+        default=PaymentStatus.PENDING,
+        index=True,
+    )
+    reference: Mapped[str | None] = mapped_column(
+        String(200), nullable=True,
+        doc="External transaction ID (bank ref, M-Pesa code, PayPal ID, etc.).",
+    )
+    payment_proof_url: Mapped[str | None] = mapped_column(
+        String(2048), nullable=True,
+        doc="CDN URL of uploaded proof of payment screenshot.",
+    )
+    paid_at: Mapped[db.DateTime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+        doc="Timestamp when admin confirmed receipt.",
+    )
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    invoices = db.relationship('Invoice', backref='subscription', lazy='dynamic')
+    booking: Mapped["Booking"] = relationship("Booking", back_populates="payments")
 
-    def __repr__(self):
-        return f"<UserSubscription {self.id} - {self.status}>"
+    def __repr__(self) -> str:
+        return (
+            f"<Payment ${self.amount_usd} [{self.method.value}/{self.status.value}] "
+            f"booking={self.booking_id}>"
+        )

@@ -1,36 +1,162 @@
-from app.extensions import db
-from app.models.base import BaseModel
-from app.models.enums import NotificationType, NotificationPriority
+# models/notification.py
+"""
+Notification system — three-layer architecture.
 
-class Notification(BaseModel):
+Layer 1: NotificationTemplate
+  Reusable, versioned message templates stored by event type.
+  Supports variable interpolation via Jinja2-style {{placeholders}}.
+  One template per (event_type, channel, language) combination.
+
+Layer 2: Notification
+  A concrete notification targeted at one recipient (User or Client).
+  Created by the notification service when an event fires.
+  Tracks read/unread state for the in-app notification centre.
+
+Layer 3: NotificationDelivery
+  One row per delivery attempt on a specific channel (email,
+  WhatsApp, SMS, in-app).  Stores provider response, delivery
+  status, and retry metadata.
+
+Design decisions
+----------------
+- Recipient is polymorphic (User OR Client) via `recipient_type` +
+  `recipient_id` to avoid two separate notification tables.
+- Templates are versioned: `is_active=False` retires a template
+  without losing delivery history that references it.
+- `NotificationDelivery` is a separate table (not columns on
+  Notification) because one notification can be delivered on multiple
+  channels simultaneously (e.g. email + WhatsApp for a booking
+  confirmation) and each channel has independent retry state.
+- `metadata_json` on Notification stores the interpolation context
+  at creation time so the template can be re-rendered for debugging
+  without reconstructing the original event payload.
+"""
+
+from sqlalchemy import (
+    Enum, ForeignKey, String, Text,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from .base import AuditMixin, db
+from app.enums import(
+    NotificationEventType,
+    NotificationPriority,
+    NotificationStatus,
+    RecipientType,
+)
+
+class Notification(db.Model, AuditMixin):
+    """
+    A concrete notification instance for one recipient.
+
+    Created by the notification service each time an event fires.
+    Populates the in-app notification centre and triggers delivery
+    jobs per the recipient's preferred channels.
+
+    `recipient_type` + `recipient_id` are a polymorphic pair:
+      - recipient_type = "user"   → FK into users
+      - recipient_type = "client" → FK into clients
+
+    `context_json` stores the Jinja2 rendering context captured at
+    event time so the template body can always be reproduced exactly,
+    even after the source booking / client record changes.
+
+    `entity_type` + `entity_id` link back to the business object that
+    triggered the notification (e.g. entity_type="booking",
+    entity_id="abc-123") for deep-linking in the notification centre.
+    """
+
     __tablename__ = "notifications"
-    
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
-    
-    type = db.Column(db.Enum(NotificationType), nullable=False)
-    title = db.Column(db.String(200), nullable=False)
-    message = db.Column(db.Text, nullable=False)
-    
-    is_read = db.Column(db.Boolean, default=False)
-    action_url = db.Column(db.String(255))
-    
-    priority = db.Column(db.Enum(NotificationPriority), default=NotificationPriority.NORMAL) 
 
-    def __repr__(self):
-        return f"<Notification {self.id} - {self.type} ({self.priority})>"
+    # Template reference
+    template_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("notification_templates.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        doc="Source template. NULL for ad-hoc notifications.",
+    )
+    event_type: Mapped[NotificationEventType] = mapped_column(
+        Enum(NotificationEventType, name="notification_event_type_enum_notif"),
+        nullable=False,
+        index=True,
+        doc="Denormalised from template for direct querying.",
+    )
 
+    # Recipient (polymorphic)
+    recipient_type: Mapped[RecipientType] = mapped_column(
+        Enum(RecipientType, name="recipient_type_enum"),
+        nullable=False,
+        index=True,
+    )
+    recipient_id: Mapped[str] = mapped_column(
+        String(36), nullable=False, index=True,
+        doc="PK of the User or Client receiving this notification.",
+    )
 
-class NotificationTemplate(BaseModel):
-    __tablename__ = "notification_templates"
-    
-    trigger_event = db.Column(db.String(100), unique=True, nullable=False)
-    name = db.Column(db.String(100), nullable=False)
-    
-    subject_template = db.Column(db.String(255))
-    body_html_template = db.Column(db.Text)
-    sms_template = db.Column(db.String(160))
-    
-    is_active = db.Column(db.Boolean, default=True)
+    # Content (rendered at creation time)
+    title: Mapped[str] = mapped_column(
+        String(300), nullable=False,
+        doc="Short rendered title for the notification centre card.",
+    )
+    body: Mapped[str] = mapped_column(
+        Text, nullable=False,
+        doc="Full rendered message body.",
+    )
+    context_json: Mapped[str | None] = mapped_column(
+        Text, nullable=True,
+        doc="JSON of the Jinja2 rendering context at creation time.",
+    )
 
-    def __repr__(self):
-        return f"<NotificationTemplate {self.name} ({self.trigger_event})>"
+    # Entity reference (for deep-linking)
+    entity_type: Mapped[str | None] = mapped_column(
+        String(100), nullable=True,
+        doc='E.g. "booking", "payment", "package".',
+    )
+    entity_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, index=True,
+        doc="PK of the related entity for deep-link navigation.",
+    )
+
+    # State
+    status: Mapped[NotificationStatus] = mapped_column(
+        Enum(NotificationStatus, name="notification_status_enum"),
+        nullable=False,
+        default=NotificationStatus.PENDING,
+        index=True,
+    )
+    priority: Mapped[NotificationPriority] = mapped_column(
+        Enum(NotificationPriority, name="notification_priority_enum"),
+        nullable=False,
+        default=NotificationPriority.NORMAL,
+    )
+    read_at: Mapped[db.DateTime | None] = mapped_column(
+        db.DateTime(timezone=True), nullable=True,
+        doc="Timestamp when the recipient read/opened the notification.",
+    )
+    dismissed_at: Mapped[db.DateTime | None] = mapped_column(
+        db.DateTime(timezone=True), nullable=True,
+    )
+    scheduled_for: Mapped[db.DateTime | None] = mapped_column(
+        db.DateTime(timezone=True), nullable=True,
+        doc="Future delivery time for scheduled notifications (e.g. pre-trip reminders).",
+    )
+
+    # Relationships
+    template: Mapped["NotificationTemplate | None"] = relationship(
+        "NotificationTemplate", back_populates="notifications",
+    )
+    deliveries: Mapped[list["NotificationDelivery"]] = relationship(
+        "NotificationDelivery",
+        back_populates="notification",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<Notification {self.event_type.value} "
+            f"→ {self.recipient_type.value}/{self.recipient_id} "
+            f"[{self.status.value}]>"
+        )
+
