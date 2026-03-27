@@ -22,6 +22,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_migrate import Migrate
 from flask_caching import Cache
+from flask_login import LoginManager
 from app.models.base import db  # noqa: F401  (re-export for convenience)
 
 migrate = Migrate()
@@ -33,3 +34,4 @@ limiter = Limiter(
     strategy="fixed-window",
 )
 cache = Cache()
+login_manager = LoginManager()

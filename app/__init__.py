@@ -94,7 +94,7 @@ def create_app(env: str | None = None, test_config: dict | None = None) -> Flask
 
     # ── 6. Initialise extensions ────────────────────────────────────────
     from app.models.base import db
-    from app.extensions import migrate, cors, limiter, cache
+    from app.extensions import migrate, cors, limiter, cache, login_manager
 
     db.init_app(app)
 
@@ -110,6 +110,8 @@ def create_app(env: str | None = None, test_config: dict | None = None) -> Flask
     )
 
     limiter.init_app(app)
+
+    login_manager.init_app(app)
 
     if cache is not None:
         app.config["CACHE_TYPE"]            = "RedisCache"
