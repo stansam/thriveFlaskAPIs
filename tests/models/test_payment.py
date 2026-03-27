@@ -1,8 +1,7 @@
 import pytest
+import datetime
 from decimal import Decimal
-from app.models.payment import Payment
-from app.models.booking import Booking
-from app.models.client import Client
+from app.models import Payment, FlightBooking, Client
 from app.enums import BookingStatus, BookingServiceType, ClientType, PaymentStatus, PaymentMethod
 
 def test_payment_creation(db_session):
@@ -16,12 +15,14 @@ def test_payment_creation(db_session):
     db_session.add(client)
     db_session.flush()
 
-    booking = Booking(
+    booking = FlightBooking(
         reference_number="TG-PAY-123",
-        service_type=BookingServiceType.FLIGHT,
         status=BookingStatus.PENDING_PAYMENT,
         client_id=client.id,
-        total_service_fee_usd=Decimal("50.00")
+        total_service_fee_usd=Decimal("50.00"),
+        origin_iata="JFK",
+        destination_iata="DXB",
+        departure_date=datetime.date(2024, 6, 1)
     )
     db_session.add(booking)
     db_session.flush()

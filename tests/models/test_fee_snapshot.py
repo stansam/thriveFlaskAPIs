@@ -1,8 +1,7 @@
 import pytest
+import datetime
 from decimal import Decimal
-from app.models.fee_snapshot import ServiceFeeSnapshot
-from app.models.booking import Booking
-from app.models.client import Client
+from app.models import ServiceFeeSnapshot, FlightBooking, Client
 from app.enums import BookingStatus, BookingServiceType, ClientType, FeeType, BookingChannel
 
 def test_service_fee_snapshot_creation(db_session):
@@ -16,12 +15,14 @@ def test_service_fee_snapshot_creation(db_session):
     db_session.add(client)
     db_session.flush()
 
-    booking = Booking(
-        reference_number="TG-SNAP-001",
-        service_type=BookingServiceType.FLIGHT,
+    booking = FlightBooking(
+        reference_number="TG-2024-FEE",
         status=BookingStatus.PENDING_PAYMENT,
         client_id=client.id,
-        total_service_fee_usd=Decimal("50.00")
+        total_service_fee_usd=Decimal("50.00"),
+        origin_iata="JFK",
+        destination_iata="DXB",
+        departure_date=datetime.date(2024, 6, 1)
     )
     db_session.add(booking)
     db_session.flush()
@@ -38,5 +39,5 @@ def test_service_fee_snapshot_creation(db_session):
     db_session.commit()
 
     assert snapshot.id is not None
-    assert snapshot.booking.reference_number == "TG-SNAP-001"
+    assert snapshot.booking.reference_number == "TG-2024-FEE"
     assert snapshot.applied_amount_usd == Decimal("50.00")

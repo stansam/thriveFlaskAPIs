@@ -13,11 +13,11 @@ def _configure_logging(config: BaseConfig) -> None:
 
     if config.LOG_FORMAT == "json":
         try:
-            from pythonjsonlogger import jsonlogger  # type: ignore
+            from pythonjsonlogger.json import JsonFormatter  # type: ignore
 
             handler = logging.StreamHandler(sys.stdout)
             handler.setFormatter(
-                jsonlogger.JsonFormatter(
+                JsonFormatter(
                     "%(asctime)s %(name)s %(levelname)s %(message)s",
                     datefmt="%Y-%m-%dT%H:%M:%SZ",
                 )

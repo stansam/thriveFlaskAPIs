@@ -73,6 +73,7 @@ class BaseConfig(BaseSettings):
     RATE_LIMIT_LOGIN_PER_MINUTE: int = 10
     RATE_LIMIT_RESET_PER_HOUR: int = 5
     RATE_LIMIT_API_PER_MINUTE: int = 300
+    RATELIMIT_STORAGE_URI: str = "redis://localhost:6379/3"
 
     # Redis  (used for: token denylist, rate limiting, optional caching)
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -194,4 +195,5 @@ class BaseConfig(BaseSettings):
             "SQLALCHEMY_ECHO": self.DATABASE_ECHO,
             "SQLALCHEMY_ENGINE_OPTIONS": self.sqlalchemy_engine_options,
             "SQLALCHEMY_TRACK_MODIFICATIONS": False,
+            "RATELIMIT_STORAGE_URI": self.RATELIMIT_STORAGE_URI,
         }

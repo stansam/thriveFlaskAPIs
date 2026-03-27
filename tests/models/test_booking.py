@@ -1,11 +1,10 @@
 import pytest
 from decimal import Decimal
-from app.models.booking import Booking
-from app.models.client import Client
+from app.models import Booking, FlightBooking, Client
 from app.enums import BookingStatus, BookingServiceType, ClientType
 
 def test_booking_base_creation(db_session):
-    """Test basic Booking model creation (as parent)."""
+    """Test basic Booking model creation via a subclass."""
     # Create a client first
     client = Client(
         first_name="John",
@@ -16,13 +15,16 @@ def test_booking_base_creation(db_session):
     db_session.add(client)
     db_session.flush()
 
-    booking = Booking(
+    # Use a specific subclass to avoid SAWarning: polymorphic_identity mismatch
+    booking = FlightBooking(
         reference_number="TG-2024-TEST",
-        service_type=BookingServiceType.FLIGHT,
         status=BookingStatus.PENDING_PAYMENT,
         client_id=client.id,
         total_service_fee_usd=Decimal("50.00"),
-        currency="USD"
+        currency="USD",
+        origin_iata="JFK",
+        destination_iata="DXB",
+        departure_date=__import__("datetime").date(2024, 6, 1)
     )
     db_session.add(booking)
     db_session.commit()

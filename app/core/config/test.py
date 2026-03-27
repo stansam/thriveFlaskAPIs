@@ -17,4 +17,5 @@ class TestingConfig(BaseConfig):
     SECRET_KEY: str = "testing-secret-key-do-not-use-in-production-12345"
     JWT_SECRET_KEY: str = "testing-jwt-secret-key-do-not-use-in-production-67890"
     RATE_LIMIT_LOGIN_PER_MINUTE: int = 1000   # effectively disable in tests
+    RATELIMIT_STORAGE_URI: str = "memory://"
 

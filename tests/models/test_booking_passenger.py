@@ -1,9 +1,8 @@
 import pytest
-from app.models.booking_passenger import BookingPassenger
-from app.models.booking import Booking
-from app.models.client import Client
-from app.enums import BookingStatus, BookingServiceType, ClientType
+import datetime
 from decimal import Decimal
+from app.models import BookingPassenger, FlightBooking, Client
+from app.enums import BookingStatus, BookingServiceType, ClientType
 
 def test_booking_passenger_creation(db_session):
     """Test BookingPassenger creation and relationship."""
@@ -16,12 +15,14 @@ def test_booking_passenger_creation(db_session):
     db_session.add(client)
     db_session.flush()
 
-    booking = Booking(
+    booking = FlightBooking(
         reference_number="TG-2024-PAX",
-        service_type=BookingServiceType.FLIGHT,
         status=BookingStatus.PENDING_PAYMENT,
         client_id=client.id,
-        total_service_fee_usd=Decimal("25.00")
+        total_service_fee_usd=Decimal("25.00"),
+        origin_iata="JFK",
+        destination_iata="DXB",
+        departure_date=datetime.date(2024, 6, 1)
     )
     db_session.add(booking)
     db_session.flush()

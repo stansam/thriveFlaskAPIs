@@ -110,7 +110,6 @@ def create_app(env: str | None = None, test_config: dict | None = None) -> Flask
     )
 
     limiter.init_app(app)
-    app.config["RATELIMIT_STORAGE_URI"] = config.REDIS_URL
 
     if cache is not None:
         app.config["CACHE_TYPE"]            = "RedisCache"

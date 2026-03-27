@@ -27,7 +27,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Generic, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_serializer
 
 T = TypeVar("T")
 
@@ -57,11 +57,21 @@ class ResponseModel(BaseModel):
     model_config = ConfigDict(
         from_attributes=True,
         populate_by_name=True,
-        json_encoders={
-            Decimal: lambda v: str(v),
-            datetime: lambda v: v.isoformat() if v else None,
-        },
     )
+
+    @model_serializer(mode="wrap")
+    def _serialize(self, handler: Any, info: Any) -> Any:
+        # Standard dump
+        data = handler(self)
+        
+        # If serialization mode is JSON, apply custom encoders
+        if info.mode == "json":
+            for key, value in data.items():
+                if isinstance(value, Decimal):
+                    data[key] = str(value)
+                elif isinstance(value, datetime):
+                    data[key] = value.isoformat()
+        return data
 
 # Audit fields mixin
 class AuditFieldsMixin(ResponseModel):
