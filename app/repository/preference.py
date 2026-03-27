@@ -1,4 +1,4 @@
-from models import UserPreference, ClientPreference
+from app.models import UserPreference, ClientPreference
 from sqlalchemy import select as _pselect
 from app.repository.base import BaseRepository
 
@@ -28,7 +28,7 @@ class ClientPreferenceRepository(BaseRepository[ClientPreference]):
         return pref
 
     def find_whatsapp_opted_in(self) -> list[ClientPreference]:
-        from models import PreferredChannel
+        from app.enums import PreferredChannel
         stmt = _pselect(ClientPreference).where(
             ClientPreference.preferred_channel == PreferredChannel.WHATSAPP,
             ClientPreference.marketing_opt_in.is_(True),

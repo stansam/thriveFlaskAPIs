@@ -47,7 +47,7 @@ class ClientRepository(BaseRepository[Client]):
 
     def marketing_opt_in_list(self) -> list[Client]:
         """Return all active clients who have opted in to marketing."""
-        from models import ClientPreference
+        from app.models import ClientPreference
         stmt = (
             select(Client)
             .join(ClientPreference, ClientPreference.client_id == Client.id)

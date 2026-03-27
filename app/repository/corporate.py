@@ -2,7 +2,8 @@ from __future__ import annotations
 from datetime import datetime
 from sqlalchemy import select
 
-from app.models import CorporateAccount, CorporateSubscription, SubscriptionTier
+from app.models import CorporateAccount, CorporateSubscription
+from app.enums import SubscriptionTier
 from app.repository.base import BaseRepository, Page
 
 class CorporateAccountRepository(BaseRepository[CorporateAccount]):

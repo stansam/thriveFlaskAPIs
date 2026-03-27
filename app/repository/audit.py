@@ -1,6 +1,7 @@
-from models import AuditLog, AuditActionType
+from app.models import AuditLog
+from app.enums import AuditActionType
 from sqlalchemy import select as _aselect
-from .base import Page as _APage
+from .base import Page as _APage, BaseRepository
 
 
 class AuditLogRepository(BaseRepository[AuditLog]):

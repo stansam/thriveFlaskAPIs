@@ -1,0 +1,52 @@
+import sys
+import logging
+from app.core.config import BaseConfig
+
+def _configure_logging(config: BaseConfig) -> None:
+    """
+    Configure Python's standard logging.
+
+    In production: JSON lines to stdout (ingested by log aggregators).
+    In development: human-readable coloured output.
+    """
+    log_level = getattr(logging, config.LOG_LEVEL.upper(), logging.INFO)
+
+    if config.LOG_FORMAT == "json":
+        try:
+            from pythonjsonlogger import jsonlogger  # type: ignore
+
+            handler = logging.StreamHandler(sys.stdout)
+            handler.setFormatter(
+                jsonlogger.JsonFormatter(
+                    "%(asctime)s %(name)s %(levelname)s %(message)s",
+                    datefmt="%Y-%m-%dT%H:%M:%SZ",
+                )
+            )
+        except ImportError:
+            handler = logging.StreamHandler(sys.stdout)
+            handler.setFormatter(
+                logging.Formatter(
+                    "%(asctime)s %(levelname)-8s %(name)s — %(message)s",
+                    datefmt="%Y-%m-%dT%H:%M:%S",
+                )
+            )
+    else:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(
+            logging.Formatter(
+                "%(asctime)s %(levelname)-8s %(name)-30s %(message)s",
+                datefmt="%H:%M:%S",
+            )
+        )
+
+    root = logging.getLogger()
+    root.setLevel(log_level)
+    root.handlers.clear()
+    root.addHandler(handler)
+
+    for noisy in ("werkzeug", "sqlalchemy.engine", "urllib3", "boto3", "botocore"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
+
+    logging.getLogger("sqlalchemy.engine").setLevel(
+        logging.INFO if config.DATABASE_ECHO else logging.WARNING
+    )

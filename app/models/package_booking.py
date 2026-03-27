@@ -12,6 +12,8 @@ from app.enums import BookingServiceType
 if TYPE_CHECKING:
     from .package import TravelPackage
 
+from .booking import Booking
+
 class PackageBooking(Booking):
     """
     Links a Booking to a TravelPackage catalogue entry.

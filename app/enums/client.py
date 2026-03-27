@@ -7,7 +7,7 @@ class ClientType(str, Enum):
     GROUP      = "group"
     EMERGENCY  = "emergency"
 
-class SubscriptionTier(str, enum.Enum):
+class SubscriptionTier(str, Enum):
     """
     Mirrors the business plan pricing matrix.
     Bronze  — $150/month, up to 6 bookings

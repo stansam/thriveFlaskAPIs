@@ -11,6 +11,7 @@ from app.enums import InclusionType
 
 if TYPE_CHECKING:
     from .package import TravelPackage
+    from .package_media import PackageMedia
 
 # PackageHighlight
 class PackageHighlight(db.Model, AuditMixin):
@@ -148,6 +149,12 @@ class PackageItineraryDay(db.Model, AuditMixin):
 
     package: Mapped["TravelPackage"] = relationship(
         "TravelPackage", back_populates="itinerary_days"
+    )
+    media: Mapped[list["PackageMedia"]] = relationship(
+        "PackageMedia",
+        back_populates="itinerary_day",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
 
     def __repr__(self) -> str:

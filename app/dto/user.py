@@ -16,7 +16,7 @@ from typing import Annotated
 from pydantic import EmailStr, Field, field_validator, model_validator
 
 from app.enums import UserRole
-from .common import AuditFieldsMixin, StrictRequestModel, ResponseModel
+from app.dto.common import AuditFieldsMixin, StrictRequestModel, ResponseModel
 
 # Requests
 class UserCreateRequest(StrictRequestModel):

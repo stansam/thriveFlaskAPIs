@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Enum, ForeignKey, String, Text,
+    Enum, ForeignKey, String, Text, SmallInteger
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

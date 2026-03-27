@@ -6,7 +6,8 @@ from __future__ import annotations
 from decimal import Decimal
 from sqlalchemy import func, select
 
-from models import Payment, PaymentStatus, PaymentMethod
+from app.models import Payment
+from app.enums import PaymentStatus, PaymentMethod
 from .base import BaseRepository, Page
 
 

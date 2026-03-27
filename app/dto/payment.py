@@ -9,7 +9,7 @@ from typing import Annotated
 
 from pydantic import Field, field_validator
 
-from models import PaymentStatus, PaymentMethod
+from app.enums import PaymentStatus, PaymentMethod
 from .common import AuditFieldsMixin, StrictRequestModel
 
 

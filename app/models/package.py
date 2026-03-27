@@ -41,6 +41,7 @@ from app.enums import PackageStatus
 
 if TYPE_CHECKING:
     from .booking import PackageBooking
+    from .package_media import PackageMedia
 
 class TravelPackage(db.Model, AuditMixin):
     """
@@ -172,6 +173,12 @@ class TravelPackage(db.Model, AuditMixin):
         back_populates="package",
         cascade="all, delete-orphan",
         order_by="PackagePriceTier.min_participants",
+        lazy="selectin",
+    )
+    media: Mapped[list["PackageMedia"]] = relationship(
+        "PackageMedia",
+        back_populates="package",
+        cascade="all, delete-orphan",
         lazy="selectin",
     )
     bookings: Mapped[list["PackageBooking"]] = relationship(

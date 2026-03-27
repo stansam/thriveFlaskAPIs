@@ -16,6 +16,7 @@ from app.enums import UserRole
 
 if TYPE_CHECKING:
     from .audit import AuditLog
+    from .user_preference import UserPreference
 
 class User(db.Model, AuditMixin):
     """
@@ -66,6 +67,13 @@ class User(db.Model, AuditMixin):
         back_populates="actor",
         foreign_keys="AuditLog.actor_id",
         lazy="dynamic",
+    )
+    preference: Mapped["UserPreference | None"] = relationship(
+        "UserPreference",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+        foreign_keys="UserPreference.user_id",
     )
 
     # Repr

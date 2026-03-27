@@ -1,7 +1,7 @@
 from __future__ import annotations
 from sqlalchemy import and_, or_, select
 
-from models import PackagePriceTier
+from app.models import PackagePriceTier
 from app.repository.base import BaseRepository
 
 class PackagePriceTierRepository(BaseRepository[PackagePriceTier]):

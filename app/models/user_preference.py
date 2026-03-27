@@ -116,7 +116,8 @@ class UserPreference(db.Model, AuditMixin):
 
     # Relationship
     user: Mapped["User"] = relationship(
-        "User", back_populates="preference", uselist=False
+        "User", back_populates="preference", uselist=False,
+        foreign_keys=[user_id],
     )
 
     def __repr__(self) -> str:

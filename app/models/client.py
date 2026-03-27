@@ -25,6 +25,7 @@ from app.enums import ClientType
 if TYPE_CHECKING:
     from .booking import Booking
     from .loyalty import LoyaltyLedger
+    from .client_preference import ClientPreference
 
 
 class Client(db.Model, AuditMixin):
@@ -134,6 +135,12 @@ class Client(db.Model, AuditMixin):
         "LoyaltyLedger",
         back_populates="client",
         lazy="dynamic",
+    )
+    preference: Mapped["ClientPreference | None"] = relationship(
+        "ClientPreference",
+        back_populates="client",
+        uselist=False,
+        cascade="all, delete-orphan",
     )
 
     @property

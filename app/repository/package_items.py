@@ -1,4 +1,4 @@
-from models import PackageHighlight, PackageInclusion, PackageItineraryDay
+from app.models import PackageHighlight, PackageInclusion, PackageItineraryDay
 from app.repository.base import BaseRepository
 
 class PackageHighlightRepository(BaseRepository[PackageHighlight]):

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from sqlalchemy import select
 
-from models import ServiceFeeSchedule, ServiceFee, FeeType, ServiceFeeSnapshot
+from app.models import ServiceFeeSchedule, ServiceFee, ServiceFeeSnapshot
+from app.enums import FeeType
 from .base import BaseRepository
 
 

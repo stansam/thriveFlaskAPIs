@@ -5,7 +5,8 @@ from __future__ import annotations
 
 from sqlalchemy import select
 
-from models import User, UserRole
+from app.models import User
+from app.enums import UserRole
 from .base import BaseRepository, Page
 
 

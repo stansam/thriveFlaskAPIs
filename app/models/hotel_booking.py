@@ -1,3 +1,8 @@
+from sqlalchemy import Date, Enum, ForeignKey, SmallInteger, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
+from app.enums import BookingServiceType, RoomType
+from .booking import Booking
+
 class HotelBooking(Booking):
     """
     Hotel-specific booking details.

@@ -11,7 +11,7 @@ from typing import Annotated
 
 from pydantic import EmailStr, Field, field_validator
 
-from models import ClientType, SubscriptionTier
+from app.enums import ClientType, SubscriptionTier
 from .common import AuditFieldsMixin, StrictRequestModel, ResponseModel
 
 # CLIENT
