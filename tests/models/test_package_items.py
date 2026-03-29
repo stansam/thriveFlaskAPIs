@@ -23,7 +23,7 @@ def test_package_items_creation(db_session):
     itinerary = PackageItineraryDay(package_id=package.id, day_number=1, title="Day 1")
     
     db_session.add_all([highlight, inclusion, itinerary])
-    db_session.commit()
+    db_session.flush()
 
     assert highlight.id is not None
     assert inclusion.id is not None

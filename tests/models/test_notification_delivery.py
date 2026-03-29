@@ -23,7 +23,7 @@ def test_notification_delivery_creation(db_session):
         provider_name="sendgrid"
     )
     db_session.add(delivery)
-    db_session.commit()
+    db_session.flush()
 
     assert delivery.id is not None
     assert delivery.notification.event_type == NotificationEventType.BOOKING_CONFIRMED

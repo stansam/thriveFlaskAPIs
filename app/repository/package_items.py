@@ -1,6 +1,11 @@
 from app.models import PackageHighlight, PackageInclusion, PackageItineraryDay
 from app.repository.base import BaseRepository
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
 class PackageHighlightRepository(BaseRepository[PackageHighlight]):
     model = PackageHighlight
 

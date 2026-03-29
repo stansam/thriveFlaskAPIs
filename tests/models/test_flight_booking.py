@@ -44,7 +44,7 @@ def test_flight_booking_and_segments(db_session):
         duration_minutes=720
     )
     db_session.add(segment)
-    db_session.commit()
+    db_session.flush()
 
     assert flight_booking.id is not None
     assert len(flight_booking.segments) == 1

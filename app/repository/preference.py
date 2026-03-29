@@ -2,6 +2,11 @@ from app.models import UserPreference, ClientPreference
 from sqlalchemy import select as _pselect
 from app.repository.base import BaseRepository
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
 class UserPreferenceRepository(BaseRepository[UserPreference]):
     model = UserPreference
 

@@ -22,7 +22,7 @@ def test_loyalty_ledger_creation(db_session):
         description="Referral reward for inviting Bob"
     )
     db_session.add(ledger_entry)
-    db_session.commit()
+    db_session.flush()
 
     assert ledger_entry.id is not None
     assert ledger_entry.amount_usd == Decimal("10.00")

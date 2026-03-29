@@ -4,6 +4,11 @@ from app.models import MediaAsset
 from app.enums import  AssetType, AssetOwnerType
 from app.repository.base import BaseRepository
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
 class MediaAssetRepository(BaseRepository[MediaAsset]):
     model = MediaAsset
 

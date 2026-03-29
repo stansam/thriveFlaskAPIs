@@ -3,6 +3,11 @@ from app.models import FlightBooking
 from .base import BaseRepository
 from app.enums import BookingStatus
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
 class FlightBookingRepository(BaseRepository[FlightBooking]):
     model = FlightBooking
 

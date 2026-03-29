@@ -23,7 +23,7 @@ def test_corporate_account_and_subscription(db_session):
         billing_cycle_end=now + timedelta(days=30)
     )
     db_session.add(subscription)
-    db_session.commit()
+    db_session.flush()
 
     assert account.id is not None
     assert subscription.id is not None

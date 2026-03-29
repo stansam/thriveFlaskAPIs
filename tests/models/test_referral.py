@@ -28,7 +28,7 @@ def test_referral_creation(db_session):
         credit_usd=Decimal("10.00")
     )
     db_session.add(referral)
-    db_session.commit()
+    db_session.flush()
 
     assert referral.id is not None
     assert referral.status == ReferralStatus.PENDING

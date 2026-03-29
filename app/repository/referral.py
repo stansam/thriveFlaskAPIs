@@ -4,6 +4,11 @@ from app.enums import ReferralStatus
 from sqlalchemy import select as _select
 from app.repository.base import BaseRepository
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
 class ReferralRepository(BaseRepository[Referral]):
     model = Referral
 

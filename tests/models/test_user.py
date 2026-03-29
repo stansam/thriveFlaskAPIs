@@ -11,7 +11,7 @@ def test_user_creation(db_session):
         role=UserRole.AGENT
     )
     db_session.add(user)
-    db_session.commit()
+    db_session.flush()
 
     assert user.id is not None
     assert user.email == "test@example.com"

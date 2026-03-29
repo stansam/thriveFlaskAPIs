@@ -3,6 +3,11 @@ from app.models import PackageBooking
 from app.enums import BookingStatus
 from .base import BaseRepository
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
 class PackageBookingRepository(BaseRepository[PackageBooking]):
     model = PackageBooking
 

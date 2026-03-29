@@ -26,7 +26,7 @@ def test_package_price_tier_creation(db_session):
         max_participants=1
     )
     db_session.add(tier)
-    db_session.commit()
+    db_session.flush()
 
     assert tier.id is not None
     assert tier.package.title == "Price Test"

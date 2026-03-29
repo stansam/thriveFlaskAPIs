@@ -15,7 +15,7 @@ def test_media_asset_creation(db_session):
         owner_id="package-123"
     )
     db_session.add(asset)
-    db_session.commit()
+    db_session.flush()
 
     assert asset.id is not None
     assert asset.storage_backend == StorageBackend.S3

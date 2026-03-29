@@ -36,7 +36,7 @@ def test_service_fee_snapshot_creation(db_session):
         channel=BookingChannel.WHATSAPP
     )
     db_session.add(snapshot)
-    db_session.commit()
+    db_session.flush()
 
     assert snapshot.id is not None
     assert snapshot.booking.reference_number == "TG-2024-FEE"

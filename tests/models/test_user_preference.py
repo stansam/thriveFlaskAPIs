@@ -19,7 +19,7 @@ def test_user_preference_creation(db_session):
         dashboard_layout=DashboardLayout.BOOKINGS
     )
     db_session.add(pref)
-    db_session.commit()
+    db_session.flush()
 
     assert pref.id is not None
     assert pref.user_id == user.id

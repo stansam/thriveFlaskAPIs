@@ -6,6 +6,11 @@ from app.models import CorporateAccount, CorporateSubscription
 from app.enums import SubscriptionTier
 from app.repository.base import BaseRepository, Page
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
 class CorporateAccountRepository(BaseRepository[CorporateAccount]):
     model = CorporateAccount
 

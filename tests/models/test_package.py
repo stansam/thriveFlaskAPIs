@@ -16,7 +16,7 @@ def test_travel_package_creation(db_session):
         status=PackageStatus.ACTIVE
     )
     db_session.add(package)
-    db_session.commit()
+    db_session.flush()
 
     assert package.id is not None
     assert package.slug == "dubai-luxury-escape"

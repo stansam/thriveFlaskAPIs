@@ -31,7 +31,7 @@ def test_hotel_booking_creation(db_session):
         num_rooms=1
     )
     db_session.add(hotel_booking)
-    db_session.commit()
+    db_session.flush()
 
     assert hotel_booking.id is not None
     assert hotel_booking.hotel_name == "Grand Hyatt"

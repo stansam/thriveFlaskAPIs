@@ -21,6 +21,11 @@ from app.models import (
 )
 from .base import BaseRepository, Page
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
 # BookingRepository  (queries across ALL service types via the parent table)
 class BookingRepository(BaseRepository[Booking]):
     model = Booking

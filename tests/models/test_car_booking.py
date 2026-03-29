@@ -28,7 +28,7 @@ def test_car_booking_creation(db_session):
         car_category=CarCategory.ECONOMY
     )
     db_session.add(car_booking)
-    db_session.commit()
+    db_session.flush()
 
     assert car_booking.id is not None
     assert car_booking.service_type == BookingServiceType.CAR

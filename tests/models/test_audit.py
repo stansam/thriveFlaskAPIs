@@ -12,7 +12,7 @@ def test_audit_log_creation(db_session):
         ip_address="127.0.0.1"
     )
     db_session.add(log)
-    db_session.commit()
+    db_session.flush()
 
     assert log.id is not None
     assert log.action == AuditActionType.LOGIN

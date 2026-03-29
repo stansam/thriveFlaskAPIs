@@ -4,6 +4,11 @@ from sqlalchemy import and_, or_, select
 from app.models import PackagePriceTier
 from app.repository.base import BaseRepository
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
 class PackagePriceTierRepository(BaseRepository[PackagePriceTier]):
     model = PackagePriceTier
 

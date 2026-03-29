@@ -11,7 +11,7 @@ def test_client_creation(db_session):
         client_type=ClientType.INDIVIDUAL
     )
     db_session.add(client)
-    db_session.commit()
+    db_session.flush()
 
     assert client.id is not None
     assert client.full_name == "Alice Smith"

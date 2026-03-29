@@ -27,7 +27,7 @@ def test_booking_base_creation(db_session):
         departure_date=__import__("datetime").date(2024, 6, 1)
     )
     db_session.add(booking)
-    db_session.commit()
+    db_session.flush()
 
     assert booking.id is not None
     assert booking.reference_number == "TG-2024-TEST"

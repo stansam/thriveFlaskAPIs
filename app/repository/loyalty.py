@@ -6,6 +6,11 @@ from app.models import LoyaltyLedger
 from app.enums import LoyaltyTransactionType
 from app.repository.base import BaseRepository
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
 class LoyaltyLedgerRepository(BaseRepository[LoyaltyLedger]):
     model = LoyaltyLedger
 

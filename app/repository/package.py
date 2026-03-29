@@ -11,6 +11,11 @@ from app.models import TravelPackage
 from app.enums import PackageStatus
 from .base import BaseRepository, Page
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
 class TravelPackageRepository(BaseRepository[TravelPackage]):
     model = TravelPackage
 

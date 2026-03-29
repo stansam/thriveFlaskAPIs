@@ -20,7 +20,7 @@ def test_client_preference_creation(db_session):
         preferred_document_format=DocumentFormat.PDF
     )
     db_session.add(pref)
-    db_session.commit()
+    db_session.flush()
 
     assert pref.id is not None
     assert pref.client_id == client.id

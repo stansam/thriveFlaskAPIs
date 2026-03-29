@@ -34,7 +34,7 @@ def test_payment_creation(db_session):
         status=PaymentStatus.CONFIRMED
     )
     db_session.add(payment)
-    db_session.commit()
+    db_session.flush()
 
     assert payment.id is not None
     assert payment.booking.reference_number == "TG-PAY-123"

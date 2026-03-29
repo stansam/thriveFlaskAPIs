@@ -10,6 +10,11 @@ from app.models import Payment
 from app.enums import PaymentStatus, PaymentMethod
 from .base import BaseRepository, Page
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
 
 class PaymentRepository(BaseRepository[Payment]):
     model = Payment

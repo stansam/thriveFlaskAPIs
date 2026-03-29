@@ -3,6 +3,11 @@ from app.enums import AuditActionType
 from sqlalchemy import select as _aselect
 from .base import Page as _APage, BaseRepository
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
 
 class AuditLogRepository(BaseRepository[AuditLog]):
     model = AuditLog

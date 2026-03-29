@@ -42,7 +42,7 @@ def test_package_booking_creation(db_session):
         total_package_cost_usd=Decimal("1000.00")
     )
     db_session.add(booking)
-    db_session.commit()
+    db_session.flush()
 
     assert booking.id is not None
     assert booking.package.title == "Test Package"

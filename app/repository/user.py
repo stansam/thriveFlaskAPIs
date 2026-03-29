@@ -9,6 +9,11 @@ from app.models import User
 from app.enums import UserRole
 from .base import BaseRepository, Page
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
 
 class UserRepository(BaseRepository[User]):
     model = User

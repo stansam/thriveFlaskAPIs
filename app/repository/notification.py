@@ -6,6 +6,11 @@ from app.enums import (
 )
 from .base import Page as _Page, BaseRepository
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
 
 class NotificationTemplateRepository(BaseRepository[NotificationTemplate]):
     model = NotificationTemplate

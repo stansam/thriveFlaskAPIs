@@ -10,7 +10,7 @@ def test_service_fee_schedule_creation(db_session):
         is_active=True
     )
     db_session.add(schedule)
-    db_session.commit()
+    db_session.flush()
 
     assert schedule.id is not None
     assert schedule.name == "2024 Standard"

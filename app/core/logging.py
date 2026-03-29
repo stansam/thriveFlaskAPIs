@@ -4,29 +4,10 @@ from app.core.config import BaseConfig
 
 
 def get_logger(name: str) -> logging.Logger:
-    """Return a stdlib Logger for the given module name.
-
-    Equivalent to ``logging.getLogger(name)``.  Modules should call this
-    instead of importing ``logging`` directly so that all loggers are obtained
-    through a single, project-controlled entry point — making it easy to
-    swap in a structured-logging wrapper in the future.
-
-    Args:
-        name: Typically ``__name__`` of the calling module.
-
-    Returns:
-        A :class:`logging.Logger` instance.
-    """
     return logging.getLogger(name)
 
 
 def _configure_logging(config: BaseConfig) -> None:
-    """
-    Configure Python's standard logging.
-
-    In production: JSON lines to stdout (ingested by log aggregators).
-    In development: human-readable coloured output.
-    """
     log_level = getattr(logging, config.LOG_LEVEL.upper(), logging.INFO)
 
     if config.LOG_FORMAT == "json":

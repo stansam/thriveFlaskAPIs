@@ -13,7 +13,7 @@ def test_notification_template_creation(db_session):
         body="Hello {{ name }}, your booking is confirmed."
     )
     db_session.add(template)
-    db_session.commit()
+    db_session.flush()
 
     assert template.id is not None
     assert template.event_type == NotificationEventType.BOOKING_CONFIRMED

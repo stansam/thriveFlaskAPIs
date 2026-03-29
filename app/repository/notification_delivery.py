@@ -4,6 +4,11 @@ from app.models import NotificationDelivery
 from app.enums import DeliveryStatus
 from .base import BaseRepository
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
 
 class NotificationDeliveryRepository(BaseRepository[NotificationDelivery]):
     model = NotificationDelivery

@@ -14,6 +14,11 @@ from app.models import Client
 from app.enums import ClientType
 from app.repository.base import BaseRepository, Page
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
 class ClientRepository(BaseRepository[Client]):
     model = Client
 

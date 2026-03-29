@@ -14,7 +14,7 @@ def test_notification_creation(db_session):
         priority=NotificationPriority.NORMAL
     )
     db_session.add(notification)
-    db_session.commit()
+    db_session.flush()
 
     assert notification.id is not None
     assert notification.event_type == NotificationEventType.BOOKING_CONFIRMED

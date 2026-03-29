@@ -34,7 +34,7 @@ def test_package_media_creation(db_session):
         is_cover=True
     )
     db_session.add(pkg_media)
-    db_session.commit()
+    db_session.flush()
 
     assert pkg_media.id is not None
     assert pkg_media.package.title == "Media Test"

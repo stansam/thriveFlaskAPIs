@@ -8,6 +8,11 @@ from app.models import ServiceFeeSchedule, ServiceFee, ServiceFeeSnapshot
 from app.enums import FeeType
 from .base import BaseRepository
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
 
 class ServiceFeeScheduleRepository(BaseRepository[ServiceFeeSchedule]):
     model = ServiceFeeSchedule

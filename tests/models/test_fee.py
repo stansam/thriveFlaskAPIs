@@ -24,7 +24,7 @@ def test_service_fee_creation(db_session):
         max_amount_usd=Decimal("50.00")
     )
     db_session.add(fee)
-    db_session.commit()
+    db_session.flush()
 
     assert fee.id is not None
     assert fee.schedule.name == "Test Schedule"

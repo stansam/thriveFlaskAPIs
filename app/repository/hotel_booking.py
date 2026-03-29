@@ -2,6 +2,11 @@ from sqlalchemy import select
 from app.models import HotelBooking
 from .base import BaseRepository
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
 class HotelBookingRepository(BaseRepository[HotelBooking]):
     model = HotelBooking
 

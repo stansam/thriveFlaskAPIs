@@ -41,6 +41,11 @@ from werkzeug.exceptions import NotFound
 
 from app.models.base import AuditMixin, db as _db
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
 M = TypeVar("M", bound=AuditMixin)
 
 @dataclass

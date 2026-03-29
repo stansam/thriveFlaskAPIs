@@ -34,7 +34,7 @@ def test_booking_passenger_creation(db_session):
         is_lead_passenger=True
     )
     db_session.add(passenger)
-    db_session.commit()
+    db_session.flush()
 
     assert passenger.id is not None
     assert passenger.full_name == "Jane Doe"
