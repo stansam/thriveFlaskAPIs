@@ -1,16 +1,9 @@
 from sqlalchemy import Date, Enum, ForeignKey, SmallInteger, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from app.enums import BookingServiceType, RoomType
-from .booking import Booking
+from app.models.booking import Booking
 
 class HotelBooking(Booking):
-    """
-    Hotel-specific booking details.
-
-    Service fee: $20 flat per booking (from pricing schedule).
-    `confirmation_number` is the hotel's own reference code.
-    """
-
     __tablename__ = "hotel_bookings"
     __mapper_args__ = {"polymorphic_identity": BookingServiceType.HOTEL}
 

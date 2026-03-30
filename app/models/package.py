@@ -1,33 +1,3 @@
-# models/package.py
-"""
-Travel & Tours Package models.
-
-Domain objects
---------------
-TravelPackage          — the catalogue entry (e.g. "Dubai Luxury Escape")
-PackagePriceTier       — price variants (solo / couple / group / add-flight)
-PackageHighlight       — bullet-point highlights shown on the listing card
-PackageInclusion       — included / excluded items (hotel, flights, insurance…)
-PackageItineraryDay    — day-by-day programme (Day 1: Desert Safari + BBQ…)
-
-Design decisions
-----------------
-1.  `TravelPackage` is the aggregate root.  All child tables are hard-deleted
-    when the parent is deleted (CASCADE).
-
-2.  Pricing is normalised into `PackagePriceTier` so the same package can
-    offer e.g. "from $1,899 solo" and "from $1,599 pp for group of 6+".
-
-3.  `PackageInclusion` uses an `InclusionType` enum (INCLUDED / EXCLUDED /
-    OPTIONAL) matching the ✔ / ✘ / ✨ business language in the business plan.
-
-4.  `PackageItineraryDay` stores one row per day, supporting rich per-day
-    descriptions, activity lists, and optional meal flags.
-
-5.  `display_order` columns on child tables control front-end sort order
-    without requiring re-inserts.
-"""
-
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -36,32 +6,16 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import AuditMixin, db
+from app.models.base import AuditMixin, db
 from app.enums import PackageStatus
 
 if TYPE_CHECKING:
-    from .booking import PackageBooking
-    from .package_media import PackageMedia
+    from app.models.package_booking import PackageBooking
+    from app.models.package_media import PackageMedia
+    from app.models.package_items import PackageHighlight, PackageInclusion, PackageItineraryDay
+    from app.models.package_price_tier import PackagePriceTier
 
-class TravelPackage(db.Model, AuditMixin):
-    """
-    Master catalogue entry for a travel package.
-
-    Example: Dubai Luxury Escape — 5 Days / 4 Nights, from $1,899 pp.
-
-    `slug` is a URL-safe identifier generated from the title, used in
-    marketing URLs.  It must be unique across active packages.
-
-    `destination_country` / `destination_city` support future filtering
-    (e.g. "Show me all packages in Europe").
-
-    `min_participants` / `max_participants` gate group-size validation
-    at booking time.
-
-    `flights_includable` flags whether the "Flights can be added"
-    option exists, triggering a FlightBooking to be attached.
-    """
-
+class TravelPackage(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     __tablename__ = "travel_packages"
 
     # Identity & copy

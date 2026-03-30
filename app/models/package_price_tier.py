@@ -6,25 +6,12 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import AuditMixin, db
+from app.models.base import AuditMixin, db
 
 if TYPE_CHECKING:
-    from .package import TravelPackage
+    from app.models.package import TravelPackage
 
-class PackagePriceTier(db.Model, AuditMixin):
-    """
-    One pricing band for a TravelPackage.
-
-    Allows the same package to advertise:
-      • $1,899 pp (solo)
-      • $1,699 pp (2 people)
-      • $1,499 pp (group of 6+)
-      • +$500 pp (add flights)
-
-    `min_participants` / `max_participants` define the band.
-    `add_on_label` is a short descriptor (e.g. "Add flights").
-    """
-
+class PackagePriceTier(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     __tablename__ = "package_price_tiers"
 
     package_id: Mapped[str] = mapped_column(

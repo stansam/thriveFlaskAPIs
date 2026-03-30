@@ -10,23 +10,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.enums import BookingServiceType
 
 if TYPE_CHECKING:
-    from .package import TravelPackage
+    from app.models.package import TravelPackage
 
 from .booking import Booking
 
 class PackageBooking(Booking):
-    """
-    Links a Booking to a TravelPackage catalogue entry.
-
-    `selected_price_tier_id` records exactly which pricing tier was
-    applied at the time of booking (prices may change later).
-    `add_flights` flags whether the client opted to include flights —
-    which will also create a linked FlightBooking.
-    `linked_flight_booking_id` allows the package booking to reference
-    its companion flight booking.
-    `travel_date` is the trip departure date.
-    """
-
     __tablename__ = "package_bookings"
     __mapper_args__ = {"polymorphic_identity": BookingServiceType.PACKAGE}
 

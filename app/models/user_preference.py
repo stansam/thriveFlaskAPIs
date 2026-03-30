@@ -1,29 +1,3 @@
-# models/preference.py
-"""
-User & Client preference models.
-
-Two separate preference models because Users (staff) and Clients
-(customers) have fundamentally different configurable surfaces:
-
-UserPreference   — admin/agent UI settings (theme, timezone, dashboard
-                   layout, default filters, notification subscriptions)
-
-ClientPreference — customer-facing settings (communication channel
-                   preference, marketing opt-in, language, currency
-                   display, document format)
-
-Both are strictly 1:1 with their parent.  They are created lazily on
-first settings update and queried with a LEFT JOIN so missing rows
-return sensible defaults without requiring a seed job.
-
-Design decision: store individual typed columns rather than a single
-JSONB "settings" blob.  This allows:
-  - SQL-level querying ("all clients who prefer WhatsApp")
-  - Indexed filtering for notification fanout jobs
-  - Alembic-tracked column additions with proper defaults
-  - No application-layer schema validation on untyped JSON
-"""
-
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
@@ -31,28 +5,15 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import AuditMixin, db
+from app.models.base import AuditMixin, db
 from app.enums import(
     ThemePreference,
     DashboardLayout,
 )
 if TYPE_CHECKING:
-    from .user import User
+    from app.models.user import User
 
-class UserPreference(db.Model, AuditMixin):
-    """
-    Persisted UI and workflow preferences for a platform operator (User).
-
-    Notification flags control which system events trigger an in-app
-    or email notification for this user.  All default to True so that
-    a new admin misses nothing; they opt-out individually.
-
-    `default_booking_channel` pre-fills the booking channel dropdown
-    when this agent creates a new booking.
-
-    `items_per_page` controls pagination defaults across all list views.
-    """
-
+class UserPreference(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     __tablename__ = "user_preferences"
 
     user_id: Mapped[str] = mapped_column(

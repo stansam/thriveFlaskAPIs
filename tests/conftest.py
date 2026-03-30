@@ -46,8 +46,10 @@ from app.core.security import hash_password
 # Application fixture  (session-scoped — created once per test session)
 # ---------------------------------------------------------------------------
 
+from typing import Generator
+
 @pytest.fixture(scope="session")
-def app() -> Flask:
+def app() -> Generator[Flask, None, None]:
     """
     Create a fully configured Flask application in TESTING mode.
 

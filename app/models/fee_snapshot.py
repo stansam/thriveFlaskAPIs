@@ -5,20 +5,14 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import AuditMixin, db
+from app.models.base import AuditMixin, db
 from app.enums import BookingChannel, FeeType
 
-class ServiceFeeSnapshot(db.Model, AuditMixin):
-    """
-    Point-in-time record of the fee that was applied to a specific booking.
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.models.booking import Booking
 
-    Written once at booking creation; never updated.
-    Decouples live fee schedule changes from historical booking records.
-
-    `applied_amount_usd` is the exact dollar amount charged (resolved
-    from the fee range + any per-pax multiplication).
-    """
-
+class ServiceFeeSnapshot(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     __tablename__ = "service_fee_snapshots"
 
     booking_id: Mapped[str] = mapped_column(

@@ -1,35 +1,3 @@
-# models/booking.py
-"""
-Booking domain — the core transactional entity of the platform.
-
-Architecture: Joined Table Inheritance (JTI)
---------------------------------------------
-`Booking` is the polymorphic parent.  Every booking — regardless of service
-type — gets one row in `bookings`.  Type-specific details live in child
-tables joined by a 1:1 FK on the same PK.
-
-    bookings
-      └── flight_bookings   (FlightBooking)
-            └── flight_segments  (FlightSegment — multi-leg support)
-      └── hotel_bookings    (HotelBooking)
-      └── car_bookings      (CarBooking)
-      └── package_bookings  (PackageBooking)
-
-Why JTI over Single-Table Inheritance?
-  - Avoids a single bloated table with 30+ nullable columns.
-  - Each service type can have NOT NULL constraints on its own columns.
-  - SQL queries on a single type skip irrelevant joins.
-
-Why NOT Concrete Table Inheritance?
-  - We want a single `bookings` table to query across all service types
-    (e.g. "show all bookings for client X" without UNION).
-
-BookingPassenger
-----------------
-For group / family bookings, multiple passengers share one Booking row.
-The first (or flagged) passenger is the lead traveller.
-"""
-
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -39,15 +7,16 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import AuditMixin, db
+from app.models.base import AuditMixin, db
 from app.enums import BookingStatus, BookingServiceType
 
 if TYPE_CHECKING:
-    from .client import Client
-    from .fee import ServiceFeeSnapshot
-    from .payment import Payment
+    from app.models.client import Client
+    from app.models.fee_snapshot import ServiceFeeSnapshot
+    from app.models.payment import Payment
+    from app.models.booking_passenger import BookingPassenger
 
-class Booking(db.Model, AuditMixin):
+class Booking(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     """
     Polymorphic parent for all booking types.
 

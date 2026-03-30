@@ -1,28 +1,18 @@
-"""
-CorporateAccount  — the legal entity behind a corporate client.
-CorporateSubscription — the active Bronze / Silver / Gold plan.
-"""
-
 from decimal import Decimal
 
-from sqlalchemy import (
+from sqlalchemy import (DateTime, 
     Boolean, Enum, ForeignKey, Integer, Numeric, String, Text
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import AuditMixin, db
+from typing import TYPE_CHECKING
+from app.models.base import AuditMixin, db
+
+if TYPE_CHECKING:
+    from app.models.client import Client
 from app.enums import SubscriptionTier
 
-class CorporateAccount(db.Model, AuditMixin):
-    """
-    Legal entity that ties together multiple corporate client contacts
-    and a subscription plan.
-
-    A CorporateAccount can have many Client records (individual employees
-    who book under the company umbrella), but exactly one active
-    CorporateSubscription at a time.
-    """
-
+class CorporateAccount(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     __tablename__ = "corporate_accounts"
 
     company_name: Mapped[str] = mapped_column(String(300), nullable=False)
@@ -55,7 +45,7 @@ class CorporateAccount(db.Model, AuditMixin):
         return f"<CorporateAccount {self.company_name}>"
 
 
-class CorporateSubscription(db.Model, AuditMixin):
+class CorporateSubscription(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     """
     The active pricing plan for a CorporateAccount.
 
@@ -102,11 +92,11 @@ class CorporateSubscription(db.Model, AuditMixin):
         default=False,
         doc="Whether 24/7 concierge support is included.",
     )
-    billing_cycle_start: Mapped[db.DateTime] = mapped_column(
-        db.DateTime(timezone=True), nullable=False
+    billing_cycle_start: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), nullable=False
     )
-    billing_cycle_end: Mapped[db.DateTime] = mapped_column(
-        db.DateTime(timezone=True), nullable=False
+    billing_cycle_end: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), nullable=False
     )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 

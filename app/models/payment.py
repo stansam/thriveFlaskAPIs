@@ -1,36 +1,16 @@
-# models/payment.py
-"""
-Payment model.
-
-Payments are recorded manually — no live payment gateway.
-The admin confirms receipt and logs the transaction here.
-
-A booking can accumulate multiple Payment rows:
-  - Deposit + balance split
-  - Partial refund after cancellation
-  - Currency conversion variants
-
-`payment_proof_url` stores a CDN link to an uploaded screenshot / bank
-confirmation that the admin attaches as evidence of receipt.
-"""
-
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import AuditMixin, db
+from app.models.base import AuditMixin, db
 from app.enums import PaymentStatus, PaymentMethod
 
 if TYPE_CHECKING:
-    from .booking import Booking
+    from app.models.booking import Booking
 
-class Payment(db.Model, AuditMixin):
-    """
-    A single payment event against a Booking.
-    """
-
+class Payment(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     __tablename__ = "payments"
 
     booking_id: Mapped[str] = mapped_column(
@@ -62,7 +42,7 @@ class Payment(db.Model, AuditMixin):
         String(2048), nullable=True,
         doc="CDN URL of uploaded proof of payment screenshot.",
     )
-    paid_at: Mapped[db.DateTime | None] = mapped_column(
+    paid_at: Mapped[DateTime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
         doc="Timestamp when admin confirmed receipt.",
     )

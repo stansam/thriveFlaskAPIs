@@ -8,6 +8,10 @@ from pydantic import Field, field_validator
 from app.enums import InclusionType
 from .common import AuditFieldsMixin, StrictRequestModel
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .package_media import PackageMediaBriefResponse
+
 # PACKAGE HIGHLIGHT
 class PackageHighlightCreateRequest(StrictRequestModel):
     text:          Annotated[str, Field(min_length=1, max_length=500)]

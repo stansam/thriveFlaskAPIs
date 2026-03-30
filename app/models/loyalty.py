@@ -1,45 +1,16 @@
-# models/loyalty.py
-"""
-Loyalty credit ledger.
-
-Uses a double-entry-style append-only approach:
-  - Positive rows  = credits earned  (referral, booking reward)
-  - Negative rows  = credits redeemed (applied to a booking fee)
-
-Running balance = SELECT SUM(amount_usd) FROM loyalty_ledger WHERE client_id = ?
-
-This avoids a mutable "balance" column that can drift out of sync.
-A database view or service-layer method computes the current balance
-on demand.
-
-Background jobs should create EXPIRY rows when credit_usd would
-otherwise sit unused past its `expires_at` date.
-"""
-
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Enum, ForeignKey, Numeric, String, Text
+from sqlalchemy import Enum, ForeignKey, Numeric, String, Text, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import AuditMixin, db
+from app.models.base import AuditMixin, db
 from app.enums import LoyaltyTransactionType
 
 if TYPE_CHECKING:
-    from .client import Client
+    from app.models.client import Client
 
-class LoyaltyLedger(db.Model, AuditMixin):
-    """
-    One line-item in the loyalty ledger for a Client.
-
-    `amount_usd` is signed:
-        > 0   credit earned / granted
-        < 0   credit redeemed / expired
-
-    `expires_at` is set on newly issued credits.  NULL on redemptions
-    and expiry rows.
-    """
-
+class LoyaltyLedger(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     __tablename__ = "loyalty_ledger"
 
     client_id: Mapped[str] = mapped_column(
@@ -78,8 +49,8 @@ class LoyaltyLedger(db.Model, AuditMixin):
         index=True,
         doc="Referral that generated this credit.",
     )
-    expires_at: Mapped[db.DateTime | None] = mapped_column(
-        db.DateTime(timezone=True),
+    expires_at: Mapped[DateTime | None] = mapped_column(
+        DateTime(timezone=True),
         nullable=True,
         doc="When this credit expires. NULL = does not expire.",
     )

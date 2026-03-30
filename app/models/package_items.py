@@ -6,24 +6,15 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import AuditMixin, db
+from app.models.base import AuditMixin, db
 from app.enums import InclusionType
 
 if TYPE_CHECKING:
-    from .package import TravelPackage
-    from .package_media import PackageMedia
+    from app.models.package import TravelPackage
+    from app.models.package_media import PackageMedia
 
 # PackageHighlight
-class PackageHighlight(db.Model, AuditMixin):
-    """
-    A single bullet-point highlight on a package listing.
-
-    Example rows for Dubai Luxury Escape:
-      - "4-star hotel in Downtown Dubai"
-      - "Desert Safari + BBQ dinner"
-      - "Burj Khalifa At-The-Top experience"
-    """
-
+class PackageHighlight(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     __tablename__ = "package_highlights"
 
     package_id: Mapped[str] = mapped_column(
@@ -49,7 +40,7 @@ class PackageHighlight(db.Model, AuditMixin):
         return f"<PackageHighlight {self.text[:40]!r}>"
 
 # PackageInclusion
-class PackageInclusion(db.Model, AuditMixin):
+class PackageInclusion(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     """
     One ✔ / ✘ / + line in the What's Included / Excluded section.
 
@@ -93,7 +84,7 @@ class PackageInclusion(db.Model, AuditMixin):
         return f"<PackageInclusion [{self.inclusion_type.value}] {self.label!r}>"
 
 # PackageItineraryDay
-class PackageItineraryDay(db.Model, AuditMixin):
+class PackageItineraryDay(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     """
     One day in the package itinerary.
 

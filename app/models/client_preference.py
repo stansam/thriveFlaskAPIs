@@ -3,27 +3,15 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import AuditMixin, db
+from typing import TYPE_CHECKING
+from app.models.base import AuditMixin, db
+
+if TYPE_CHECKING:
+    from app.models.client import Client
 from app.enums import PreferredChannel, DocumentFormat
 
 # ClientPreference  (1:1 with Client)
-class ClientPreference(db.Model, AuditMixin):
-    """
-    Persisted communication and display preferences for a Client (customer).
-
-    `preferred_channel` drives which delivery method is attempted first
-    when sending booking confirmations, reminders, and marketing.
-
-    `marketing_opt_in` gates whether the client appears in broadcast
-    lists (WhatsApp, email campaigns).
-
-    `travel_reminder_hours` controls how far before departure the system
-    sends a pre-travel reminder notification (default 48h per business plan).
-
-    `preferred_currency_display` is display-only — all amounts are stored
-    in USD; this just formats the display in the client portal.
-    """
-
+class ClientPreference(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     __tablename__ = "client_preferences"
 
     client_id: Mapped[str] = mapped_column(

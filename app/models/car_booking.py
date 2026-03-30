@@ -5,7 +5,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.enums import BookingServiceType, CarCategory
-from .booking import Booking
+from app.models.booking import Booking
 
 class CarBooking(Booking):
     """

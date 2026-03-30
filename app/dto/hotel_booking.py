@@ -12,7 +12,7 @@ from app.enums import (
 )
 from .common import AuditFieldsMixin, StrictRequestModel
 from .client import ClientSummaryResponse
-from .booking_passenger import BookingPassengerCreateRequest
+from .booking_passenger import BookingPassengerCreateRequest, BookingPassengerResponse
 
 class HotelBookingCreateRequest(StrictRequestModel):
     client_id:       str

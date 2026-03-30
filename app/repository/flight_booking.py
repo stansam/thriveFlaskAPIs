@@ -1,3 +1,4 @@
+from datetime import date
 from sqlalchemy import select
 from app.models import FlightBooking
 from .base import BaseRepository

@@ -1,30 +1,5 @@
 # models/media.py
 """
-Media asset management.
-
-Design
-------
-A single `MediaAsset` table stores every uploaded file (images, PDFs,
-receipts) across the entire system.  Ownership is tracked via two
-nullable FK columns (`owner_type` + `owner_id`) — a lightweight
-polymorphic association pattern that avoids a join table per domain.
-
-MediaAsset replaces the primitive `cover_image_url`, `gallery_urls`,
-and `image_url` string columns that existed on TravelPackage and
-PackageItineraryDay.  Those columns are retained as computed
-`@property` helpers for backwards compatibility during migration but
-should be dropped after the first release.
-
-PackageMedia
-------------
-An ordered junction table linking TravelPackage → MediaAsset rows.
-Supports: cover image (is_cover=True), gallery carousel (ordered by
-display_order), and day-level images (linked via itinerary_day_id).
-
-UserAvatar
-----------
-A simple 1:1 extension of MediaAsset scoped to a User.
-
 Supported asset types
 ---------------------
 IMAGE_JPEG, IMAGE_PNG, IMAGE_WEBP  — marketing / itinerary images
@@ -39,14 +14,15 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import AuditMixin, db
+from app.models.base import AuditMixin, db
 from app.enums import AssetType, AssetOwnerType, StorageBackend
 
 if TYPE_CHECKING:
-    from .package_itinerary_days import PackageItineraryDay
-    from .media_asset import MediaAsset
+    from app.models.package_itinerary_days import PackageItineraryDay
+    from app.models.package_media import PackageMedia
+    
 
-class MediaAsset(db.Model, AuditMixin):
+class MediaAsset(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     """
     A single uploaded file, owned by one domain entity.
 

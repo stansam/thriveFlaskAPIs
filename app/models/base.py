@@ -1,25 +1,3 @@
-# models/base.py
-"""
-Shared SQLAlchemy instance and the AuditMixin that every model inherits from.
-
-AuditMixin provides:
-  - id            : UUID primary key (server-side default via gen_random_uuid() in Postgres,
-                    or Python uuid4 fallback for SQLite / tests)
-  - created_at    : UTC timestamp set once on INSERT
-  - updated_at    : UTC timestamp refreshed on every UPDATE via onupdate
-  - created_by_id : FK → users.id — the user who created the record (nullable so seed /
-                    system-generated rows can exist without a user)
-  - updated_by_id : FK → users.id — the last user who touched the record
-
-Usage
------
-    class MyModel(db.Model, AuditMixin):
-        __tablename__ = "my_models"
-        ...
-
-The mixin deliberately does NOT include `__tablename__` — subclasses own that.
-"""
-
 import uuid
 from datetime import datetime, timezone
 

@@ -3,9 +3,14 @@ from sqlalchemy import (
     ForeignKey, String,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from .base import AuditMixin, db
 
-class BookingPassenger(db.Model, AuditMixin):
+from typing import TYPE_CHECKING
+from app.models.base import AuditMixin, db
+
+if TYPE_CHECKING:
+    from app.models.booking import Booking
+
+class BookingPassenger(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     """
     A traveller attached to a booking.
 

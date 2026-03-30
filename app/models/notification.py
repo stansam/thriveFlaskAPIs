@@ -32,12 +32,12 @@ Design decisions
   without reconstructing the original event payload.
 """
 
-from sqlalchemy import (
+from sqlalchemy import (DateTime, 
     Enum, ForeignKey, String, Text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import AuditMixin, db
+from app.models.base import AuditMixin, db
 from app.enums import(
     NotificationEventType,
     NotificationPriority,
@@ -45,27 +45,12 @@ from app.enums import(
     RecipientType,
 )
 
-class Notification(db.Model, AuditMixin):
-    """
-    A concrete notification instance for one recipient.
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.models.notification_template import NotificationTemplate
+    from app.models.notification_delivery import NotificationDelivery
 
-    Created by the notification service each time an event fires.
-    Populates the in-app notification centre and triggers delivery
-    jobs per the recipient's preferred channels.
-
-    `recipient_type` + `recipient_id` are a polymorphic pair:
-      - recipient_type = "user"   → FK into users
-      - recipient_type = "client" → FK into clients
-
-    `context_json` stores the Jinja2 rendering context captured at
-    event time so the template body can always be reproduced exactly,
-    even after the source booking / client record changes.
-
-    `entity_type` + `entity_id` link back to the business object that
-    triggered the notification (e.g. entity_type="booking",
-    entity_id="abc-123") for deep-linking in the notification centre.
-    """
-
+class Notification(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     __tablename__ = "notifications"
 
     # Template reference
@@ -130,15 +115,15 @@ class Notification(db.Model, AuditMixin):
         nullable=False,
         default=NotificationPriority.NORMAL,
     )
-    read_at: Mapped[db.DateTime | None] = mapped_column(
-        db.DateTime(timezone=True), nullable=True,
+    read_at: Mapped[DateTime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
         doc="Timestamp when the recipient read/opened the notification.",
     )
-    dismissed_at: Mapped[db.DateTime | None] = mapped_column(
-        db.DateTime(timezone=True), nullable=True,
+    dismissed_at: Mapped[DateTime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
     )
-    scheduled_for: Mapped[db.DateTime | None] = mapped_column(
-        db.DateTime(timezone=True), nullable=True,
+    scheduled_for: Mapped[DateTime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
         doc="Future delivery time for scheduled notifications (e.g. pre-trip reminders).",
     )
 

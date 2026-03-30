@@ -4,30 +4,14 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import AuditMixin, db
+from app.models.base import AuditMixin, db
 
 if TYPE_CHECKING:
-    from .package import TravelPackage
-    from .package_itinerary_days import PackageItineraryDay
-    from .media_asset import MediaAsset
+    from app.models.package import TravelPackage
+    from app.models.package_itinerary_days import PackageItineraryDay
+    from app.models.media_asset import MediaAsset
 
-class PackageMedia(db.Model, AuditMixin):
-    """
-    Ordered association between a TravelPackage and its media assets.
-
-    One package has:
-      - Exactly one cover image (is_cover=True, display_order=0)
-      - 0-N gallery images (is_cover=False, ordered by display_order)
-      - 0-N day images linked via itinerary_day_id
-
-    Separating cover from gallery via `is_cover` allows the front-end
-    to fetch them independently without filtering on display_order.
-
-    `itinerary_day_id` links a media asset specifically to a day within
-    the package itinerary (e.g. Day 2 hero shot of the Desert Safari).
-    When NULL the asset belongs to the package-level gallery.
-    """
-
+class PackageMedia(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     __tablename__ = "package_media"
 
     package_id: Mapped[str] = mapped_column(

@@ -4,22 +4,12 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import AuditMixin, db
+from app.models.base import AuditMixin, db
 from app.enums import BookingServiceType, FlightCabin
-from .booking import Booking
+from app.models.booking import Booking
 
 
 class FlightBooking(Booking):
-    """
-    Flight-specific booking details.
-
-    Supports multi-leg itineraries via the `FlightSegment` child table.
-    `pnr` (Passenger Name Record) is the airline's confirmation code —
-    populated once the ticket is issued.
-    `airline_booking_url` stores the deeplink returned by the Kayak API
-    wrapper so the admin can complete the purchase in one click.
-    """
-
     __tablename__ = "flight_bookings"
     __mapper_args__ = {"polymorphic_identity": BookingServiceType.FLIGHT}
 
@@ -86,7 +76,7 @@ class FlightBooking(Booking):
             f"{self.origin_iata}→{self.destination_iata}>"
         )
 
-class FlightSegment(db.Model, AuditMixin):
+class FlightSegment(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     """
     One leg of a multi-segment itinerary.
 

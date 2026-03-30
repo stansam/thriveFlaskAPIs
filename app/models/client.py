@@ -1,52 +1,21 @@
-# models/client.py
-"""
-Client — the end-customer of Thrive Global Travel & Tours.
-
-A Client can be:
-  - INDIVIDUAL   : a single traveller, family, student, or frequent flyer
-  - CORPORATE    : a company that holds a CorporateAccount + Subscription
-  - GROUP        : a church, nonprofit, school, or ad-hoc group
-  - EMERGENCY    : a last-minute/urgent booking client (same data; useful for analytics)
-
-CorporateAccount  — the legal entity behind a corporate client.
-CorporateSubscription — the active Bronze / Silver / Gold plan.
-"""
-
 from typing import TYPE_CHECKING
 
-from sqlalchemy import (
+from sqlalchemy import (Date, 
     Boolean, Enum, ForeignKey, String, Text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import AuditMixin, db
+from app.models.base import AuditMixin, db
 from app.enums import ClientType
 
 if TYPE_CHECKING:
-    from .booking import Booking
-    from .loyalty import LoyaltyLedger
-    from .client_preference import ClientPreference
+    from app.models.corporate import CorporateAccount
+    from app.models.booking import Booking
+    from app.models.loyalty import LoyaltyLedger
+    from app.models.client_preference import ClientPreference
 
 
-class Client(db.Model, AuditMixin):
-    """
-    End-customer profile.
-
-    A Client is distinct from a User (platform operator).  A single
-    travelling person or company contact is a Client; the agent who books
-    on their behalf is a User.
-
-    Referral tracking
-    -----------------
-    `referred_by_id` is a self-FK pointing to the Client who made the
-    referral.  The $10 credit is tracked in the LoyaltyLedger.
-
-    Group leader flag
-    -----------------
-    For group bookings, one Client is flagged `is_group_leader=True`.
-    The BookingPassenger table links all travellers to a single booking.
-    """
-
+class Client(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     __tablename__ = "clients"
 
     # Personal info
@@ -69,11 +38,11 @@ class Client(db.Model, AuditMixin):
         nullable=True,
         doc="Stored encrypted at application layer. Used for flight bookings.",
     )
-    passport_expiry: Mapped[db.Date | None] = mapped_column(
-        db.Date, nullable=True
+    passport_expiry: Mapped[Date | None] = mapped_column(
+        Date, nullable=True
     )
-    date_of_birth: Mapped[db.Date | None] = mapped_column(
-        db.Date, nullable=True, doc="Required for international itineraries."
+    date_of_birth: Mapped[Date | None] = mapped_column(
+        Date, nullable=True, doc="Required for international itineraries."
     )
     preferred_language: Mapped[str] = mapped_column(
         String(10), nullable=False, default="en"

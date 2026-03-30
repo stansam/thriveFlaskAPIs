@@ -4,31 +4,14 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import AuditMixin, db
+from typing import TYPE_CHECKING
+from app.models.base import AuditMixin, db
+
+if TYPE_CHECKING:
+    from app.models.notification import Notification
 from app.enums import NotificationEventType, NotificationChannel
 
-class NotificationTemplate(db.Model, AuditMixin):
-    """
-    Reusable, versioned message template.
-
-    One row per (event_type × channel × language) combination.
-    The notification service selects the best-match template using
-    the recipient's preferred language, falling back to "en".
-
-    Template body uses Jinja2-compatible `{{ variable }}` syntax.
-    Available variables are documented in `variable_schema` (JSON Schema
-    string) for developer reference and optional validation.
-
-    Example (BOOKING_CONFIRMED × EMAIL × en):
-      subject = "Your booking {{ reference_number }} is confirmed! ✈️"
-      body    = "Hi {{ client_first_name }}, your trip to {{ destination }}
-                 departs on {{ departure_date }}. ..."
-
-    `is_active = False` retires the template without deleting history.
-    `version`  increments on each edit so delivery logs can reference
-               which revision was used.
-    """
-
+class NotificationTemplate(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     __tablename__ = "notification_templates"
 
     event_type: Mapped[NotificationEventType] = mapped_column(

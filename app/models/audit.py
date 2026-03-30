@@ -1,37 +1,15 @@
-# models/audit.py
-"""
-Immutable append-only audit log.
-
-Every significant action in the platform (booking status change, payment
-confirmation, client update, login event) writes a row here.
-
-IMMUTABILITY CONTRACT
----------------------
-AuditLog rows must NEVER be updated or hard-deleted.
-Enforce this at two layers:
-  1. Application: AuditLog has no service-layer update method.
-  2. Database: add a BEFORE UPDATE / BEFORE DELETE trigger in your
-     migration that raises an exception for any operation on this table.
-
-`before_snapshot` / `after_snapshot` are JSON strings so that the full
-state of the changed entity is preserved even if the entity is later
-deleted.
-
-`ip_address` supports IPv6 (max 45 chars for IPv4-mapped IPv6).
-"""
-
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Enum, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import AuditMixin, db
+from app.models.base import AuditMixin, db
 from app.enums import AuditActionType
 
 if TYPE_CHECKING:
-    from .user import User
+    from app.models.user import User
 
-class AuditLog(db.Model, AuditMixin):
+class AuditLog(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     """
     Append-only event log row.
 

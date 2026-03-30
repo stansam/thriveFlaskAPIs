@@ -1,36 +1,17 @@
-# models/user.py
-"""
-Internal staff / admin users of the platform.
-
-Clients (customers) are a separate model — see client.py.
-This model represents Dr. Edna and future employees who operate the system.
-"""
-
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Enum, String
+from datetime import datetime
+from sqlalchemy import Boolean, Enum, String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import AuditMixin, db
+from app.models.base import AuditMixin, db
 from app.enums import UserRole
 
 if TYPE_CHECKING:
-    from .audit import AuditLog
-    from .user_preference import UserPreference
+    from app.models.audit import AuditLog
+    from app.models.user_preference import UserPreference
 
-class User(db.Model, AuditMixin):
-    """
-    Platform operator / internal staff member.
-
-    Security notes
-    --------------
-    - `password_hash` stores a bcrypt / argon2 digest — never plaintext.
-    - `is_active` gates authentication; soft-delete disabled users
-      without losing audit history.
-    - `mfa_secret` stores a TOTP seed (base-32 encoded); NULL means MFA
-      is not enrolled.
-    """
-
+class User(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     __tablename__ = "users"
 
     # Identity
@@ -57,8 +38,8 @@ class User(db.Model, AuditMixin):
         nullable=True,
         doc="TOTP seed (base-32). NULL = MFA not enrolled.",
     )
-    last_login_at: Mapped[db.DateTime | None] = mapped_column(
-        db.DateTime(timezone=True), nullable=True
+    last_login_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
 
     # Relationships

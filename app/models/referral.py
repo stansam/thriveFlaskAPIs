@@ -1,34 +1,16 @@
-# models/referral.py
-"""
-Referral tracking.
-
-When client A refers client B, a Referral row is created.
-On B's first completed booking the status transitions to QUALIFIED → CREDITED,
-and a LoyaltyLedger row is written granting A a $10 credit.
-"""
-
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Enum, ForeignKey, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from .base import AuditMixin, db
+from app.models.base import AuditMixin, db
 from app.enums import ReferralStatus
 
 if TYPE_CHECKING:
     pass
 
-class Referral(db.Model, AuditMixin):
-    """
-    One referral event linking two Client records.
-
-    referrer_id           — the client who made the referral
-    referee_id            — the client who was referred
-    credit_usd            — credit to award on qualification (default $10)
-    qualifying_booking_id — the booking that triggered QUALIFIED
-    """
-
+class Referral(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     __tablename__ = "referrals"
 
     referrer_id: Mapped[str] = mapped_column(

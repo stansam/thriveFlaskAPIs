@@ -1,35 +1,19 @@
-from sqlalchemy import (
+from sqlalchemy import (DateTime, 
     Enum, ForeignKey, String, Text, SmallInteger
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import AuditMixin, db
+from typing import TYPE_CHECKING
+from app.models.base import AuditMixin, db
+
+if TYPE_CHECKING:
+    from app.models.notification import Notification
 from app.enums import(
     NotificationChannel,
     DeliveryStatus,
 )
 
-class NotificationDelivery(db.Model, AuditMixin):
-    """
-    One delivery attempt on a specific channel for a Notification.
-
-    A single Notification can have multiple Delivery rows:
-      - One per channel (email, WhatsApp, in-app simultaneously)
-      - Additional rows for retries on failure
-
-    `provider_message_id` stores the external ID returned by the
-    delivery provider (SendGrid message ID, Twilio SID, etc.) for
-    reconciliation and webhook lookups.
-
-    `provider_response_json` captures the raw API response body for
-    debugging without requiring a separate log query.
-
-    Retry logic:
-      `attempt_number` increments on each retry.
-      `next_retry_at`  is set by the retry scheduler.
-      Max retries enforced at the application layer (typically 3).
-    """
-
+class NotificationDelivery(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     __tablename__ = "notification_deliveries"
 
     notification_id: Mapped[str] = mapped_column(
@@ -75,27 +59,27 @@ class NotificationDelivery(db.Model, AuditMixin):
         SmallInteger, nullable=False, default=1,
         doc="1-indexed attempt counter.",
     )
-    sent_at: Mapped[db.DateTime | None] = mapped_column(
-        db.DateTime(timezone=True), nullable=True,
+    sent_at: Mapped[DateTime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
         doc="When the delivery request was dispatched to the provider.",
     )
-    delivered_at: Mapped[db.DateTime | None] = mapped_column(
-        db.DateTime(timezone=True), nullable=True,
+    delivered_at: Mapped[DateTime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
         doc="Confirmed delivery timestamp (from provider webhook).",
     )
-    opened_at: Mapped[db.DateTime | None] = mapped_column(
-        db.DateTime(timezone=True), nullable=True,
+    opened_at: Mapped[DateTime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
         doc="Email open / WhatsApp read-receipt timestamp.",
     )
-    failed_at: Mapped[db.DateTime | None] = mapped_column(
-        db.DateTime(timezone=True), nullable=True,
+    failed_at: Mapped[DateTime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
     )
     failure_reason: Mapped[str | None] = mapped_column(
         String(500), nullable=True,
         doc="Human-readable failure description for admin display.",
     )
-    next_retry_at: Mapped[db.DateTime | None] = mapped_column(
-        db.DateTime(timezone=True), nullable=True,
+    next_retry_at: Mapped[DateTime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
         doc="Scheduled time for the next retry attempt.",
     )
 
