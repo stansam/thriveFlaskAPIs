@@ -12,7 +12,7 @@ from typing import Annotated
 from pydantic import EmailStr, Field, field_validator
 
 from app.enums import ClientType, SubscriptionTier
-from .common import AuditFieldsMixin, StrictRequestModel, ResponseModel
+from app.dto.common import AuditFieldsMixin, StrictRequestModel, ResponseModel
 
 # CLIENT
 class ClientCreateRequest(StrictRequestModel):

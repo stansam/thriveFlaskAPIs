@@ -14,6 +14,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Final
+from argon2 import PasswordHasher
 
 from flask_login import login_user, logout_user
 
@@ -59,11 +60,11 @@ logger: logging.Logger = get_logger(__name__)
 # Pre-computed Argon2id hash used as a constant-time dummy when the
 # requested email does not exist. Prevents timing-based user enumeration.
 # Generated once: `from argon2 import PasswordHasher; PasswordHasher().hash("_dummy_")`
-_DUMMY_HASH: Final[str] = (
-    "$argon2id$v=19$m=65536,t=3,p=4"
-    "$c29tZXNhbHRzb21lc2FsdA"
-    "$Vf1zUYMDe1RrMEHhJFUTLx5WwC/4zJXX3gM8Bq7N8Ko"
-)
+# _DUMMY_HASH: Final[str] = (
+#     "$argon2id$v=19$m=65536,t=3,p=4"
+#     "$c29tZXNhbHRzb21lc2FsdA"
+#     "$Vf1zUYMDe1RrMEHhJFUTLx5WwC/4zJXX3gM8Bq7N8Ko"
+# )
 
 
 class AuthService:
@@ -98,10 +99,8 @@ class AuthService:
         self._uow = uow
         self._denylist = denylist
 
-    # ------------------------------------------------------------------ #
-    #  Private helpers                                                     #
-    # ------------------------------------------------------------------ #
 
+    #  Private helpers
     def _write_audit(
         self,
         action: AuditActionType,
@@ -139,10 +138,8 @@ class AuthService:
             user_agent=user_agent,
         )
 
-    # ------------------------------------------------------------------ #
-    #  Public service methods                                              #
-    # ------------------------------------------------------------------ #
 
+    #  Public service methods
     def login(
         self,
         data: LoginRequest,
@@ -168,11 +165,7 @@ class AuthService:
             MFAInvalidError: If the provided TOTP code is invalid or expired.
         """
         user = self._users.find_by_email(data.email)
-
-        # Always run verify_password regardless of whether user exists.
-        # This guarantees a constant-time path that defeats timing-based
-        # email enumeration attacks.
-        check_hash = user.password_hash if user else _DUMMY_HASH
+        check_hash = user.password_hash if user else PasswordHasher().hash("_dummy_")
 
         if not verify_password(data.password, check_hash) or user is None:
             logger.warning(
@@ -412,9 +405,6 @@ class AuthService:
         user.password_hash = hash_password(data.new_password)
         self._users.save(user)
 
-        # Step 5: atomically mark token consumed BEFORE commit
-        # (if Redis write fails we raise without committing — token stays valid
-        #  for retry, which is safer than committing then failing to invalidate)
         consumed = self._denylist.consume(
             data.token,
             ttl_seconds=settings.JWT_RESET_TOKEN_EXPIRES_SECONDS,

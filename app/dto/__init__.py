@@ -31,7 +31,7 @@ from .user import (
     MFASetupResponse, ForgotPasswordResponse,
 )
 from .client import (
-    ClientCreateRequest, ClientUpdateRequest, ClientResponse,
+    ClientCreateRequest, ClientUpdateRequest, ClientResponse, ClientSummaryResponse
 )
 from .corporate import (
     CorporateAccountCreateRequest, CorporateAccountUpdateRequest, CorporateAccountResponse,

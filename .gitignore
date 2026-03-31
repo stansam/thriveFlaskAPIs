@@ -13,3 +13,4 @@ tempo/
 .agent/
 app12/
 tmp/
+.mypy_cache/
