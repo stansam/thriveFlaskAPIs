@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from decimal import Decimal
 from typing import Any
-
+from app.interface._base import BaseService
 from app.enums import AuditActionType, BookingStatus, ClientType
 from app.core.errors.handlers import (
     BadRequestError,
@@ -41,12 +41,13 @@ from app.repository.loyalty import LoyaltyLedgerRepository
 from app.interface.audit import AuditService
 from app.core.unit_of_work import IUnitOfWork
 from app.repository.base import Page
+from app.core.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = get_logger(__name__)
 
 
 def _booking_summary(b: Any) -> BookingSummaryResponse:
-    from app.models.booking import FlightBooking, HotelBooking, CarBooking, PackageBooking
+    from app.models import FlightBooking, HotelBooking, CarBooking, PackageBooking
     line = ""
     if isinstance(b, FlightBooking):
         line = f"{b.origin_iata}→{b.destination_iata} {b.departure_date}"
@@ -73,7 +74,7 @@ def _booking_summary(b: Any) -> BookingSummaryResponse:
     )
 
 
-class _BaseClientOperation:
+class _ClientOperation(BaseService):
     """Base dependencies and helpers for client operations."""
 
     def __init__(
@@ -92,37 +93,37 @@ class _BaseClientOperation:
         self._audits = audit_service
         self._uow = uow
 
-    @staticmethod
-    def _snapshot(obj: Any, fields: list[str] | None = None) -> dict:
-        """
-        Build a JSON-safe dict from an ORM object for audit snapshots.
-        """
-        if obj is None:
-            return {}
-        try:
-            from sqlalchemy import inspect
-            mapper = inspect(type(obj))
-            col_names = [c.key for c in mapper.columns]
-            if fields:
-                col_names = [f for f in fields if f in col_names]
-            return {
-                k: getattr(obj, k, None)
-                for k in col_names
-                if not k.startswith("password")
-            }
-        except Exception:
-            return {"id": getattr(obj, "id", None)}
+    # @staticmethod
+    # def _snapshot(obj: Any, fields: list[str] | None = None) -> dict:
+    #     """
+    #     Build a JSON-safe dict from an ORM object for audit snapshots.
+    #     """
+    #     if obj is None:
+    #         return {}
+    #     try:
+    #         from sqlalchemy import inspect
+    #         mapper = inspect(type(obj))
+    #         col_names = [c.key for c in mapper.columns]
+    #         if fields:
+    #             col_names = [f for f in fields if f in col_names]
+    #         return {
+    #             k: getattr(obj, k, None)
+    #             for k in col_names
+    #             if not k.startswith("password")
+    #         }
+    #     except Exception:
+    #         return {"id": getattr(obj, "id", None)}
 
-    @staticmethod
-    def _page_meta(page: Page) -> dict:
-        return {
-            "total":       page.total,
-            "page":        page.page,
-            "per_page":    page.per_page,
-            "total_pages": page.total_pages,
-            "has_next":    page.has_next,
-            "has_prev":    page.has_prev,
-        }
+    # @staticmethod
+    # def _page_meta(page: Page) -> dict:
+    #     return {
+    #         "total":       page.total,
+    #         "page":        page.page,
+    #         "per_page":    page.per_page,
+    #         "total_pages": page.total_pages,
+    #         "has_next":    page.has_next,
+    #         "has_prev":    page.has_prev,
+    #     }
 
 
 class GetClientOperation(_BaseClientOperation):

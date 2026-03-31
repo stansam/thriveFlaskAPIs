@@ -16,6 +16,13 @@ from app.repository import (
     fee_schedule_repo,
     fee_repo,
     fee_snapshot_repo,
+    package_repo,
+    package_highlight_repo,
+    package_inclusion_repo,
+    package_itinerary_day_repo,
+    package_price_tier_repo,
+    package_media_repo,
+    package_booking_repo,
 )
 from app.core.unit_of_work import SQLAlchemyUnitOfWork
 from app.core.token_denylist import RedisTokenDenylist
@@ -24,6 +31,7 @@ from app.interface.user import UserService
 from app.interface.client import ClientService
 from app.interface.corporate import CorporateService
 from app.interface.fee import FeeService
+from app.interface.package import PackageService
 from app.interface.audit import audit_service
 
 
@@ -55,7 +63,7 @@ class _ServiceRegistry:
         loyalty_repo=loyalty_repo,
         audit_service=audit_service,
         uow=SQLAlchemyUnitOfWork(),
-    )
+    ) # log
 
     corporate: CorporateService = CorporateService(
         corporate_account_repo=corporate_account_repo,
@@ -63,7 +71,7 @@ class _ServiceRegistry:
         client_repo=client_repo,
         audit_service=audit_service,
         uow=SQLAlchemyUnitOfWork(),
-    )
+    ) # log
 
     fee: FeeService = FeeService(
         fee_schedule_repo=fee_schedule_repo,
@@ -71,7 +79,19 @@ class _ServiceRegistry:
         fee_snapshot_repo=fee_snapshot_repo,
         audit_service=audit_service,
         uow=SQLAlchemyUnitOfWork(),
-    )
+    ) # log
+
+    package: PackageService = PackageService(
+        package_repo=package_repo,
+        package_highlight_repo=package_highlight_repo,
+        package_inclusion_repo=package_inclusion_repo,
+        package_itinerary_day_repo=package_itinerary_day_repo,
+        package_price_tier_repo=package_price_tier_repo,
+        package_media_repo=package_media_repo,
+        package_booking_repo=package_booking_repo,
+        audit_service=audit_service,
+        uow=SQLAlchemyUnitOfWork(),
+    ) # log
 
 
 # Exported singleton
@@ -83,6 +103,7 @@ user_service = registry.user
 client_service = registry.client
 corporate_service = registry.corporate
 fee_service = registry.fee
+package_service = registry.package
 
 __all__ = [
     "registry",
@@ -91,4 +112,5 @@ __all__ = [
     "client_service",
     "corporate_service",
     "fee_service",
+    "package_service",
 ]

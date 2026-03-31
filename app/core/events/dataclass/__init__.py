@@ -25,7 +25,12 @@ from app.core.events.dataclass.fee import(
 )
 
 from app.core.events.dataclass.package import(
-    PackagePublishedEvent
+    PackageCreatedEvent, PackageUpdatedEvent, PackagePublishedEvent,
+    PackagePausedEvent, PackageArchivedEvent, PackageDuplicatedEvent,
+    PackageHighlightAddedEvent, PackageHighlightUpdatedEvent, PackageHighlightDeletedEvent,
+    PackageInclusionAddedEvent, PackageInclusionUpdatedEvent, PackageInclusionDeletedEvent,
+    PackageItineraryDayAddedEvent, PackageItineraryDayUpdatedEvent, PackageItineraryDayDeletedEvent,
+    PackagePriceTierAddedEvent, PackagePriceTierUpdatedEvent, PackagePriceTierDeactivatedEvent
 )
 
 from app.core.events.dataclass.payment import(
@@ -72,7 +77,24 @@ __all__ = [
     "ServiceFeeUpdatedEvent",
     "ServiceFeeDeactivatedEvent",
     "FeeSnapshotCreatedEvent",
+    "PackageCreatedEvent",
+    "PackageUpdatedEvent",
     "PackagePublishedEvent",
+    "PackagePausedEvent",
+    "PackageArchivedEvent",
+    "PackageDuplicatedEvent",
+    "PackageHighlightAddedEvent",
+    "PackageHighlightUpdatedEvent",
+    "PackageHighlightDeletedEvent",
+    "PackageInclusionAddedEvent",
+    "PackageInclusionUpdatedEvent",
+    "PackageInclusionDeletedEvent",
+    "PackageItineraryDayAddedEvent",
+    "PackageItineraryDayUpdatedEvent",
+    "PackageItineraryDayDeletedEvent",
+    "PackagePriceTierAddedEvent",
+    "PackagePriceTierUpdatedEvent",
+    "PackagePriceTierDeactivatedEvent",
     "PaymentReceivedEvent",
     "PaymentRefundedEvent",
     "ReferralQualifiedEvent",

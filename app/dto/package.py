@@ -11,8 +11,8 @@ from typing import Annotated
 from pydantic import Field, field_validator
 
 from app.enums import PackageStatus, InclusionType
-from .common import AuditFieldsMixin, StrictRequestModel, ResponseModel
-
+from app.dto.common import AuditFieldsMixin, StrictRequestModel, ResponseModel
+from app.dto.media import PackageMediaResponse
 # PACKAGE HIGHLIGHT
 class PackageHighlightCreateRequest(StrictRequestModel):
     text:          Annotated[str, Field(min_length=1, max_length=500)]
@@ -66,7 +66,7 @@ class PackageItineraryDayResponse(AuditFieldsMixin):
     meals_included: str | None
     accommodation:  str | None
     # Media
-    media: list["PackageMediaBriefResponse"] = []
+    media: list[PackageMediaResponse] = []
 
 # PACKAGE PRICE TIER
 class PackagePriceTierCreateRequest(StrictRequestModel):
@@ -206,16 +206,9 @@ class TravelPackageResponse(AuditFieldsMixin):
     price_tiers:   list[PackagePriceTierResponse] = []
     # Media
     cover_image_url: str | None = None
-    gallery:         list["PackageMediaBriefResponse"] = []
+    gallery:         list[PackageMediaResponse] = []
     # Analytics
     total_bookings: int = 0
 
-# Compact media reference used inside package / day responses
-class PackageMediaBriefResponse(ResponseModel):
-    id:            str
-    asset_id:      str
-    cdn_url:       str
-    alt_text:      str | None
-    is_cover:      bool
-    display_order: int
-    caption:       str | None
+PackageItineraryDayResponse.model_rebuild()
+TravelPackageResponse.model_rebuild()

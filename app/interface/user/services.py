@@ -7,9 +7,10 @@ Operation class. They are all composed together by the UserService facade.
 """
 from __future__ import annotations
 
-import logging
 from typing import Any
+import logging
 
+from app.interface._base import BaseService
 from app.enums import AuditActionType, UserRole
 from app.core.errors.handlers import (
     BadRequestError,
@@ -36,12 +37,11 @@ from app.repository.user import UserRepository
 from app.repository.preference import UserPreferenceRepository
 from app.interface.audit import AuditService
 from app.core.unit_of_work import IUnitOfWork
+from app.core.logging import get_logger
 from app.repository.base import Page
 
-logger = logging.getLogger(__name__)
-
-
-class _BaseUserOperation:
+logger: logging.Logger = get_logger(__name__)
+class _UserOperation(BaseService):
     """Base dependencies and helpers for user operations."""
 
     def __init__(
@@ -56,49 +56,15 @@ class _BaseUserOperation:
         self._audits = audit_service
         self._uow = uow
 
-    @staticmethod
-    def _snapshot(obj: Any, fields: list[str] | None = None) -> dict:
-        """
-        Build a JSON-safe dict from an ORM object for audit snapshots.
-        Only includes scalar columns; skips relationships to avoid lazy loads.
-        If `fields` is provided, only those fields are included.
-        """
-        if obj is None:
-            return {}
-        try:
-            from sqlalchemy import inspect
-            mapper = inspect(type(obj))
-            col_names = [c.key for c in mapper.columns]
-            if fields:
-                col_names = [f for f in fields if f in col_names]
-            return {
-                k: getattr(obj, k, None)
-                for k in col_names
-                if not k.startswith("password")  # never snapshot passwords
-            }
-        except Exception:
-            return {"id": getattr(obj, "id", None)}
-
-    @staticmethod
-    def _page_meta(page: Page) -> dict:
-        """Return pagination metadata dict from a repository Page."""
-        return {
-            "total":       page.total,
-            "page":        page.page,
-            "per_page":    page.per_page,
-            "total_pages": page.total_pages,
-            "has_next":    page.has_next,
-            "has_prev":    page.has_prev,
-        }
 
 
-class GetUserOperation(_BaseUserOperation):
+class GetUserOperation(_UserOperation):
     def execute(self, user_id: str) -> UserResponse:
         user = self._users.get_or_404(user_id)
         return UserResponse.from_user(user)
 
 
-class GetUserByEmailOperation(_BaseUserOperation):
+class GetUserByEmailOperation(_UserOperation):
     def execute(self, email: str) -> UserResponse:
         user = self._users.find_by_email(email.lower().strip())
         if not user:
@@ -106,7 +72,7 @@ class GetUserByEmailOperation(_BaseUserOperation):
         return UserResponse.from_user(user)
 
 
-class ListUsersOperation(_BaseUserOperation):
+class ListUsersOperation(_UserOperation):
     def execute(
         self,
         role: UserRole | None = None,
@@ -128,7 +94,7 @@ class ListUsersOperation(_BaseUserOperation):
         }
 
 
-class CreateUserOperation(_BaseUserOperation):
+class CreateUserOperation(_UserOperation):
     def execute(self, data: UserCreateRequest, actor_id: str) -> UserResponse:
         email = data.email.lower().strip()
         if self._users.exists(email=email):
@@ -164,7 +130,7 @@ class CreateUserOperation(_BaseUserOperation):
         return UserResponse.from_user(user)
 
 
-class UpdateUserOperation(_BaseUserOperation):
+class UpdateUserOperation(_UserOperation):
     def execute(
         self,
         user_id: str,
@@ -194,7 +160,7 @@ class UpdateUserOperation(_BaseUserOperation):
         return UserResponse.from_user(user)
 
 
-class DeactivateUserOperation(_BaseUserOperation):
+class DeactivateUserOperation(_UserOperation):
     def execute(self, user_id: str, actor_id: str) -> UserResponse:
         user = self._users.get_or_404(user_id)
 
@@ -224,7 +190,7 @@ class DeactivateUserOperation(_BaseUserOperation):
         return UserResponse.from_user(user)
 
 
-class ReactivateUserOperation(_BaseUserOperation):
+class ReactivateUserOperation(_UserOperation):
     def execute(self, user_id: str, actor_id: str) -> UserResponse:
         user = self._users.get_or_404(user_id)
         before = self._snapshot(user, ["is_active"])
@@ -246,7 +212,7 @@ class ReactivateUserOperation(_BaseUserOperation):
         return UserResponse.from_user(user)
 
 
-class GetUserPreferenceOperation(_BaseUserOperation):
+class GetUserPreferenceOperation(_UserOperation):
     def execute(self, user_id: str) -> UserPreferenceResponse:
         self._users.get_or_404(user_id)
         pref = self._user_prefs.get_or_create(user_id=user_id)
@@ -254,7 +220,7 @@ class GetUserPreferenceOperation(_BaseUserOperation):
         return UserPreferenceResponse.model_validate(pref)
 
 
-class UpdateUserPreferenceOperation(_BaseUserOperation):
+class UpdateUserPreferenceOperation(_UserOperation):
     def execute(
         self,
         user_id: str,

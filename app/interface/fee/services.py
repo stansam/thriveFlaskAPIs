@@ -9,6 +9,7 @@ event emissions dynamically.
 
 from __future__ import annotations
 
+import logging
 from decimal import Decimal
 from typing import Any
 
@@ -32,6 +33,9 @@ from app.dto import (
     ServiceFeeSnapshotResponse,
 )
 from app.interface._base import BaseService
+from app.core.logging import get_logger
+
+logger: logging.Logger = get_logger(__name__)
 
 _EMERGENCY_SURCHARGE = Decimal("25.00")
 

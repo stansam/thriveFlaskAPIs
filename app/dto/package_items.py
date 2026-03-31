@@ -8,9 +8,7 @@ from pydantic import Field, field_validator
 from app.enums import InclusionType
 from .common import AuditFieldsMixin, StrictRequestModel
 
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from .package_media import PackageMediaBriefResponse
+from .media import PackageMediaResponse
 
 # PACKAGE HIGHLIGHT
 class PackageHighlightCreateRequest(StrictRequestModel):
@@ -65,7 +63,9 @@ class PackageItineraryDayResponse(AuditFieldsMixin):
     meals_included: str | None
     accommodation:  str | None
     # Media
-    media: list["PackageMediaBriefResponse"] = []
+    media: list[PackageMediaResponse] = []
+
+PackageItineraryDayResponse.model_rebuild()
 
 # PACKAGE PRICE TIER
 class PackagePriceTierCreateRequest(StrictRequestModel):
