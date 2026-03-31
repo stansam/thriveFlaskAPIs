@@ -11,7 +11,7 @@ from app.core.events.dataclass.package import (
 
 @patch("app.interface.package.services.event_bus")
 def test_add_itinerary_day_success(mock_bus, service, package_repo, package_itinerary_day_repo, uow, mock_package, mock_itinerary_day):
-    package_repo.get_or_404.return_value = mock_package
+    package_repo.get.return_value = mock_package
     package_itinerary_day_repo.max_day_number.return_value = 1
     package_itinerary_day_repo.create.return_value = mock_itinerary_day
 
@@ -30,7 +30,7 @@ def test_add_itinerary_day_success(mock_bus, service, package_repo, package_itin
 
 
 def test_add_itinerary_day_sequence_error(service, package_repo, package_itinerary_day_repo, mock_package):
-    package_repo.get_or_404.return_value = mock_package
+    package_repo.get.return_value = mock_package
     package_itinerary_day_repo.max_day_number.return_value = 1
 
     req = PackageItineraryDayCreateRequest.model_validate({
@@ -45,7 +45,7 @@ def test_add_itinerary_day_sequence_error(service, package_repo, package_itinera
 
 @patch("app.interface.package.services.event_bus")
 def test_update_itinerary_day(mock_bus, service, package_itinerary_day_repo, uow, mock_itinerary_day):
-    package_itinerary_day_repo.get_or_404.return_value = mock_itinerary_day
+    package_itinerary_day_repo.get.return_value = mock_itinerary_day
 
     req = PackageItineraryDayUpdateRequest.model_validate({"title": "Updated Title"})
     result = service.update_itinerary_day("day-2", req, actor_id="admin-1")
@@ -58,7 +58,7 @@ def test_update_itinerary_day(mock_bus, service, package_itinerary_day_repo, uow
 
 @patch("app.interface.package.services.event_bus")
 def test_delete_itinerary_day(mock_bus, service, package_itinerary_day_repo, uow, mock_itinerary_day):
-    package_itinerary_day_repo.get_or_404.return_value = mock_itinerary_day
+    package_itinerary_day_repo.get.return_value = mock_itinerary_day
 
     service.delete_itinerary_day("day-2", actor_id="admin-1")
 

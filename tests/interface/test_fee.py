@@ -216,7 +216,7 @@ def test_create_schedule_success(
 def test_activate_schedule(
     mock_bus, service, fee_schedule_repo, audit_service, uow, mock_schedule
 ):
-    fee_schedule_repo.get_or_404.return_value = mock_schedule
+    fee_schedule_repo.get.return_value = mock_schedule
 
     result = service.activate_schedule("sch-123", actor_id="admin-1")
 
@@ -232,7 +232,7 @@ def test_activate_schedule(
 def test_deactivate_schedule_success(
     mock_bus, service, fee_schedule_repo, audit_service, uow, mock_schedule
 ):
-    fee_schedule_repo.get_or_404.return_value = mock_schedule
+    fee_schedule_repo.get.return_value = mock_schedule
     fee_schedule_repo.count.return_value = 2  # more than 1 active
 
     service.deactivate_schedule("sch-123", actor_id="admin-1")
@@ -247,7 +247,7 @@ def test_deactivate_schedule_success(
 def test_deactivate_last_active_schedule_fails(
     service, fee_schedule_repo, mock_schedule
 ):
-    fee_schedule_repo.get_or_404.return_value = mock_schedule
+    fee_schedule_repo.get.return_value = mock_schedule
     fee_schedule_repo.count.return_value = 1  # Only 1 active
 
     with pytest.raises(BadRequestError):
@@ -260,7 +260,7 @@ def test_deactivate_last_active_schedule_fails(
 def test_add_fee_to_schedule(
     mock_bus, service, fee_schedule_repo, fee_repo, uow, mock_fee
 ):
-    fee_schedule_repo.get_or_404.return_value = MagicMock()
+    fee_schedule_repo.get.return_value = MagicMock()
     fee_repo.create.return_value = mock_fee
 
     req = ServiceFeeCreateRequest.model_validate({
@@ -281,7 +281,7 @@ def test_add_fee_to_schedule(
 
 @patch("app.interface.fee.services.event_bus")
 def test_update_fee(mock_bus, service, fee_repo, uow, mock_fee):
-    fee_repo.get_or_404.return_value = mock_fee
+    fee_repo.get.return_value = mock_fee
 
     result = service.update_fee("fee-123", {"amount_usd": Decimal("20.00")}, actor_id="admin-1")
 
@@ -293,7 +293,7 @@ def test_update_fee(mock_bus, service, fee_repo, uow, mock_fee):
 
 @patch("app.interface.fee.services.event_bus")
 def test_deactivate_fee(mock_bus, service, fee_repo, uow, mock_fee):
-    fee_repo.get_or_404.return_value = mock_fee
+    fee_repo.get.return_value = mock_fee
 
     service.deactivate_fee("fee-123", actor_id="admin-1")
 

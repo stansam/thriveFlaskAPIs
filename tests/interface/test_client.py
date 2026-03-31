@@ -173,7 +173,7 @@ def mock_pref() -> MagicMock:
 # ── Tests: Get & List ──────────────────────────────────────────────────────────
 
 def test_get_client_success(service, client_repo, booking_repo, loyalty_repo, mock_client):
-    client_repo.get_or_404.return_value = mock_client
+    client_repo.get.return_value = mock_client
     loyalty_repo.balance_for_client.return_value = Decimal("100.00")
     booking_repo.count.return_value = 5
 
@@ -182,12 +182,12 @@ def test_get_client_success(service, client_repo, booking_repo, loyalty_repo, mo
     assert result.id == "client-123"
     assert result.loyalty_balance_usd == Decimal("100.00")
     assert result.total_bookings == 5
-    client_repo.get_or_404.assert_called_once_with("client-123")
+    client_repo.get.assert_called_once_with("client-123")
 
 
 def test_get_client_by_email_success(service, client_repo, booking_repo, loyalty_repo, mock_client):
     client_repo.find_by_email.return_value = mock_client
-    client_repo.get_or_404.return_value = mock_client
+    client_repo.get.return_value = mock_client
     loyalty_repo.balance_for_client.return_value = Decimal("100.00")
     booking_repo.count.return_value = 5
 
@@ -239,7 +239,7 @@ def test_create_client_success(
 ):
     client_repo.find_by_email.return_value = None
     client_repo.create.return_value = mock_client
-    client_repo.get_or_404.return_value = mock_client
+    client_repo.get.return_value = mock_client
     loyalty_repo.balance_for_client.return_value = Decimal("0.00")
     booking_repo.count.return_value = 0
     
@@ -296,7 +296,7 @@ def test_create_client_duplicate_email(service, client_repo):
 
 @patch("app.interface.client.services.event_bus")
 def test_update_client_success(mock_bus, service, client_repo, booking_repo, loyalty_repo, audit_service, uow, mock_client):
-    client_repo.get_or_404.return_value = mock_client
+    client_repo.get.return_value = mock_client
     loyalty_repo.balance_for_client.return_value = Decimal("0.00")
     booking_repo.count.return_value = 0
 
@@ -317,7 +317,7 @@ def test_update_client_success(mock_bus, service, client_repo, booking_repo, loy
 
 @patch("app.interface.client.services.event_bus")
 def test_deactivate_client_success(mock_bus, service, client_repo, booking_repo, loyalty_repo, audit_service, uow, mock_client):
-    client_repo.get_or_404.return_value = mock_client
+    client_repo.get.return_value = mock_client
     booking_repo.find_by_client.return_value = [] # No active bookings
     loyalty_repo.balance_for_client.return_value = Decimal("0.00")
     booking_repo.count.return_value = 0
@@ -332,7 +332,7 @@ def test_deactivate_client_success(mock_bus, service, client_repo, booking_repo,
 
 
 def test_deactivate_client_active_bookings(service, client_repo, booking_repo, mock_client):
-    client_repo.get_or_404.return_value = mock_client
+    client_repo.get.return_value = mock_client
     # Simulate first status check returning a booking
     booking_repo.find_by_client.return_value = [MagicMock()]
 
@@ -343,7 +343,7 @@ def test_deactivate_client_active_bookings(service, client_repo, booking_repo, m
 # ── Tests: Preferences ─────────────────────────────────────────────────────────
 
 def test_get_client_preference_success(service, client_repo, client_preference_repo, uow, mock_client, mock_pref):
-    client_repo.get_or_404.return_value = mock_client
+    client_repo.exists.return_value = True
     client_preference_repo.get_or_create.return_value = mock_pref
 
     result = service.get_client_preference("client-123")
@@ -355,7 +355,7 @@ def test_get_client_preference_success(service, client_repo, client_preference_r
 
 @patch("app.interface.client.services.event_bus")
 def test_update_client_preference(mock_bus, service, client_repo, client_preference_repo, uow, mock_client, mock_pref):
-    client_repo.get_or_404.return_value = mock_client
+    client_repo.exists.return_value = True
     client_preference_repo.get_or_create.return_value = mock_pref
 
     req = ClientPreferenceUpdateRequest.model_validate({

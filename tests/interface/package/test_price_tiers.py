@@ -12,7 +12,7 @@ from app.core.events.dataclass.package import (
 
 @patch("app.interface.package.services.event_bus")
 def test_add_price_tier_success(mock_bus, service, package_repo, package_price_tier_repo, uow, mock_package, mock_price_tier):
-    package_repo.get_or_404.return_value = mock_package
+    package_repo.get.return_value = mock_package
     package_price_tier_repo.find_by_package.return_value = []
     package_price_tier_repo.create.return_value = mock_price_tier
 
@@ -35,7 +35,7 @@ def test_add_price_tier_success(mock_bus, service, package_repo, package_price_t
 
 
 def test_add_price_tier_overlap_raises(service, package_repo, package_price_tier_repo, mock_package):
-    package_repo.get_or_404.return_value = mock_package
+    package_repo.get.return_value = mock_package
     
     existing = MagicMock()
     existing.is_add_on = False
@@ -59,7 +59,7 @@ def test_add_price_tier_overlap_raises(service, package_repo, package_price_tier
 
 @patch("app.interface.package.services.event_bus")
 def test_update_price_tier(mock_bus, service, package_price_tier_repo, uow, mock_price_tier):
-    package_price_tier_repo.get_or_404.return_value = mock_price_tier
+    package_price_tier_repo.get.return_value = mock_price_tier
 
     req = PackagePriceTierUpdateRequest.model_validate({"price_usd": "1200.00"})
     result = service.update_price_tier("tier-1", req, actor_id="admin-1")
@@ -72,7 +72,7 @@ def test_update_price_tier(mock_bus, service, package_price_tier_repo, uow, mock
 
 @patch("app.interface.package.services.event_bus")
 def test_deactivate_price_tier(mock_bus, service, package_price_tier_repo, uow, mock_price_tier):
-    package_price_tier_repo.get_or_404.return_value = mock_price_tier
+    package_price_tier_repo.get.return_value = mock_price_tier
 
     service.deactivate_price_tier("tier-1", actor_id="admin-1")
 

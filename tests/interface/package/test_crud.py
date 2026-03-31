@@ -15,7 +15,7 @@ from app.core.events.dataclass.package import (
 def test_create_package_success(mock_bus, service, package_repo, audit_service, uow, mock_package):
     package_repo.slug_exists.return_value = False
     package_repo.create.return_value = mock_package
-    package_repo.get_or_404.return_value = mock_package
+    package_repo.get.return_value = mock_package
 
     req = TravelPackageCreateRequest.model_validate({
         "title": "New Safari",
@@ -51,7 +51,7 @@ def test_create_package_success(mock_bus, service, package_repo, audit_service, 
 
 @patch("app.interface.package.services.event_bus")
 def test_update_package_success_slug_generation(mock_bus, service, package_repo, audit_service, uow, mock_package):
-    package_repo.get_or_404.return_value = mock_package
+    package_repo.get.return_value = mock_package
     package_repo.slug_exists.side_effect = [True, False] # Exists first time, UUID appended passes
 
     req = TravelPackageUpdateRequest.model_validate({"title": "Updated Title"})
@@ -65,7 +65,7 @@ def test_update_package_success_slug_generation(mock_bus, service, package_repo,
 
 
 def test_update_package_duplicate_slug_raises(service, package_repo, mock_package):
-    package_repo.get_or_404.return_value = mock_package
+    package_repo.get.return_value = mock_package
     package_repo.slug_exists.return_value = True
 
     req = TravelPackageUpdateRequest.model_validate({"slug": "existing-slug"})
@@ -78,7 +78,7 @@ def test_publish_package_success(mock_bus, service, package_repo, package_price_
     mock_package.highlights = [mock_highlight]
     package_price_tier_repo.find_by_package.return_value = [MagicMock()]
     package_media_repo.find_cover.return_value = mock_cover_media
-    package_repo.get_or_404.return_value = mock_package
+    package_repo.get.return_value = mock_package
 
     result = service.publish_package("pkg-123", actor_id="admin-1")
 
@@ -90,7 +90,7 @@ def test_publish_package_success(mock_bus, service, package_repo, package_price_
 
 def test_publish_package_validation_fails(service, package_repo, package_price_tier_repo, package_media_repo, mock_package):
     mock_package.highlights = [] # Missing highlight
-    package_repo.get_or_404.return_value = mock_package
+    package_repo.get.return_value = mock_package
 
     with pytest.raises(BadRequestError):
         service.publish_package("pkg-123", actor_id="admin-1")
@@ -98,7 +98,7 @@ def test_publish_package_validation_fails(service, package_repo, package_price_t
 
 @patch("app.interface.package.services.event_bus")
 def test_archive_package_success(mock_bus, service, package_repo, package_booking_repo, uow, mock_package):
-    package_repo.get_or_404.return_value = mock_package
+    package_repo.get.return_value = mock_package
     package_booking_repo.find_by_package.return_value = []
 
     service.archive_package("pkg-123", actor_id="admin-1")
@@ -110,7 +110,7 @@ def test_archive_package_success(mock_bus, service, package_repo, package_bookin
 
 
 def test_archive_package_fails_with_bookings(service, package_repo, package_booking_repo, mock_package):
-    package_repo.get_or_404.return_value = mock_package
+    package_repo.get.return_value = mock_package
     package_booking_repo.find_by_package.return_value = [MagicMock()] # Active booking exists
 
     with pytest.raises(BusinessRuleViolationError):
@@ -119,15 +119,15 @@ def test_archive_package_fails_with_bookings(service, package_repo, package_book
 
 @patch("app.interface.package.services.event_bus")
 def test_duplicate_package(mock_bus, service, package_repo, uow, mock_package):
-    package_repo.get_or_404.return_value = mock_package
+    package_repo.get.return_value = mock_package
     package_repo.slug_exists.return_value = False
     
     mock_clone = mock_package
     mock_clone.id = "clone-123"
     mock_clone.media = []
     
-    # Needs to return clone via get_or_404 post-commit
-    package_repo.get_or_404.side_effect = [mock_package, mock_clone]
+    # Needs to return clone via get post-commit
+    package_repo.get.side_effect = [mock_package, mock_clone]
     package_repo.create.return_value = mock_clone
 
     service.duplicate_package("pkg-123", actor_id="admin-1")

@@ -60,7 +60,9 @@ class _UserOperation(BaseService):
 
 class GetUserOperation(_UserOperation):
     def execute(self, user_id: str) -> UserResponse:
-        user = self._users.get_or_404(user_id)
+        user = self._users.get(user_id)
+        if not user:
+            raise NotFoundError("User", user_id)
         return UserResponse.from_user(user)
 
 
@@ -137,7 +139,10 @@ class UpdateUserOperation(_UserOperation):
         data: UserUpdateRequest,
         actor_id: str,
     ) -> UserResponse:
-        user = self._users.get_or_404(user_id)
+        user = self._users.get(user_id)
+        if not user:
+            raise NotFoundError("User", user_id)
+            
         before = self._snapshot(user, ["full_name", "phone", "role", "is_active"])
 
         updates = data.model_dump(exclude_none=True)
@@ -163,11 +168,14 @@ class UpdateUserOperation(_UserOperation):
 
 class DeactivateUserOperation(_UserOperation):
     def execute(self, user_id: str, actor_id: str) -> UserResponse:
-        user = self._users.get_or_404(user_id)
+        user = self._users.get(user_id)
+        if not user:
+            raise NotFoundError("User", user_id)
 
         if user.role == UserRole.SUPER_ADMIN:
             active_admins = self._users.find_active_by_role(UserRole.SUPER_ADMIN)
             if len(active_admins) <= 1:
+                logger.error("Deactivation blocked: Attempt to deactivate the last SUPER_ADMIN (user_id=%s) by actor=%s", user_id, actor_id)
                 raise BadRequestError(
                     "Cannot deactivate the last active SUPER_ADMIN account."
                 )
@@ -194,7 +202,10 @@ class DeactivateUserOperation(_UserOperation):
 
 class ReactivateUserOperation(_UserOperation):
     def execute(self, user_id: str, actor_id: str) -> UserResponse:
-        user = self._users.get_or_404(user_id)
+        user = self._users.get(user_id)
+        if not user:
+            raise NotFoundError("User", user_id)
+            
         before = self._snapshot(user, ["is_active"])
         self._users.update(user, actor_id=actor_id, is_active=True)
 
@@ -217,7 +228,9 @@ class ReactivateUserOperation(_UserOperation):
 
 class GetUserPreferenceOperation(_UserOperation):
     def execute(self, user_id: str) -> UserPreferenceResponse:
-        self._users.get_or_404(user_id)
+        if not self._users.exists(id=user_id):
+            raise NotFoundError("User", user_id)
+            
         pref = self._user_prefs.get_or_create(user_id=user_id)
         self._uow.commit()   # commit the lazy-create if it happened
         return UserPreferenceResponse.model_validate(pref)
@@ -230,7 +243,9 @@ class UpdateUserPreferenceOperation(_UserOperation):
         data: UserPreferenceUpdateRequest,
         actor_id: str,
     ) -> UserPreferenceResponse:
-        self._users.get_or_404(user_id)
+        if not self._users.exists(id=user_id):
+            raise NotFoundError("User", user_id)
+            
         pref = self._user_prefs.get_or_create(user_id=user_id, actor_id=actor_id)
 
         updates = data.model_dump(exclude_none=True)

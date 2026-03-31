@@ -153,7 +153,7 @@ def mock_account(mock_sub) -> MagicMock:
 # ── Tests: Account Queries ───────────────────────────────────────────────────
 
 def test_get_corporate_account_success(service, corporate_account_repo, client_repo, mock_account):
-    corporate_account_repo.get_or_404.return_value = mock_account
+    corporate_account_repo.get.return_value = mock_account
     client_repo.find_by_corporate_account.return_value = [MagicMock(), MagicMock()] # 2 clients
 
     result = service.get_corporate_account("corp-123")
@@ -191,7 +191,7 @@ def test_create_corporate_account_success(
     mock_bus, service, corporate_account_repo, client_repo, audit_service, uow, mock_account
 ):
     corporate_account_repo.create.return_value = mock_account
-    corporate_account_repo.get_or_404.return_value = mock_account
+    corporate_account_repo.get.return_value = mock_account
     client_repo.find_by_corporate_account.return_value = []
 
     req = CorporateAccountCreateRequest.model_validate({
@@ -221,7 +221,7 @@ def test_create_corporate_account_success(
 def test_update_corporate_account_success(
     mock_bus, service, corporate_account_repo, client_repo, audit_service, uow, mock_account
 ):
-    corporate_account_repo.get_or_404.return_value = mock_account
+    corporate_account_repo.get.return_value = mock_account
     client_repo.find_by_corporate_account.return_value = []
 
     req = CorporateAccountUpdateRequest.model_validate({
@@ -241,7 +241,7 @@ def test_update_corporate_account_success(
 def test_deactivate_corporate_account(
     mock_bus, service, corporate_account_repo, corporate_subscription_repo, audit_service, uow, mock_account
 ):
-    corporate_account_repo.get_or_404.return_value = mock_account
+    corporate_account_repo.get.return_value = mock_account
 
     service.deactivate_corporate_account("corp-123", actor_id="admin-1")
 
@@ -261,7 +261,7 @@ def test_deactivate_corporate_account(
 def test_create_subscription_success(
     mock_bus, service, corporate_account_repo, corporate_subscription_repo, audit_service, uow, mock_account, mock_sub
 ):
-    corporate_account_repo.get_or_404.return_value = mock_account
+    corporate_account_repo.exists.return_value = True
     corporate_subscription_repo.find_by_account.return_value = None
     corporate_subscription_repo.create.return_value = mock_sub
 
@@ -286,7 +286,7 @@ def test_create_subscription_success(
 def test_upgrade_subscription_success(
     mock_bus, service, corporate_account_repo, corporate_subscription_repo, audit_service, uow, mock_account, mock_sub
 ):
-    corporate_account_repo.get_or_404.return_value = mock_account
+    corporate_account_repo.get.return_value = mock_account
     corporate_subscription_repo.find_by_account.return_value = mock_sub
     corporate_subscription_repo.create.return_value = mock_sub
 

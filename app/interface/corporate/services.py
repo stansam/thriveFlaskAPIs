@@ -91,7 +91,9 @@ class _CorporateOperation(BaseService):
 
 class GetCorporateAccountOperation(_CorporateOperation):
     def execute(self, account_id: str) -> CorporateAccountResponse:
-        account = self._accounts.get_or_404(account_id)
+        account = self._accounts.get(account_id)
+        if not account:
+            raise NotFoundError("Corporate Account", account_id)
         resp = CorporateAccountResponse.model_validate(account)
         resp.client_count = len(self._clients.find_by_corporate_account(account_id))
         if account.subscription:
@@ -116,7 +118,9 @@ class ListCorporateAccountsOperation(_CorporateOperation):
 
 class ListAccountClientsOperation(_CorporateOperation):
     def execute(self, account_id: str, page: int = 1, per_page: int = 25) -> dict[str, Any]:
-        self._accounts.get_or_404(account_id)
+        if not self._accounts.exists(id=account_id):
+            raise NotFoundError("Corporate Account", account_id)
+            
         result = self._clients.paginate_clients(
             corporate_account_id=account_id, page=page, per_page=per_page
         )
@@ -163,7 +167,9 @@ class UpdateCorporateAccountOperation(_CorporateOperation):
         self, account_id: str, data: CorporateAccountUpdateRequest, actor_id: str, get_op: GetCorporateAccountOperation
     ) -> CorporateAccountResponse:
         with self._uow:
-            account = self._accounts.get_or_404(account_id)
+            account = self._accounts.get(account_id)
+            if not account:
+                raise NotFoundError("Corporate Account", account_id)
             before = self._snapshot(account)
             updates = data.model_dump(exclude_none=True)
             
@@ -193,7 +199,9 @@ class UpdateCorporateAccountOperation(_CorporateOperation):
 class DeactivateCorporateAccountOperation(_CorporateOperation):
     def execute(self, account_id: str, actor_id: str) -> None:
         with self._uow:
-            account = self._accounts.get_or_404(account_id)
+            account = self._accounts.get(account_id)
+            if not account:
+                raise NotFoundError("Corporate Account", account_id)
             self._accounts.update(account, actor_id=actor_id, is_active=False)
             
             if account.subscription and account.subscription.is_active:
@@ -223,7 +231,8 @@ class CreateSubscriptionOperation(_CorporateOperation):
         self, data: CorporateSubscriptionCreateRequest, actor_id: str
     ) -> CorporateSubscriptionResponse:
         with self._uow:
-            self._accounts.get_or_404(data.account_id)
+            if not self._accounts.exists(id=data.account_id):
+                raise NotFoundError("Corporate Account", data.account_id)
             existing = self._subscriptions.find_by_account(data.account_id)
             
             if existing and existing.is_active:
@@ -271,7 +280,9 @@ class UpgradeSubscriptionOperation(_CorporateOperation):
         self, account_id: str, new_tier: SubscriptionTier, actor_id: str
     ) -> CorporateSubscriptionResponse:
         with self._uow:
-            account = self._accounts.get_or_404(account_id)
+            account = self._accounts.get(account_id)
+            if not account:
+                raise NotFoundError("Corporate Account", account_id)
             existing = self._subscriptions.find_by_account(account_id)
             
             if existing:
@@ -309,6 +320,7 @@ class UpgradeSubscriptionOperation(_CorporateOperation):
             subscription_id=sub.id,
             new_tier=new_tier.value,
         ))
+        logger.info("Subscription upgraded: account_id=%s to tier=%s by actor=%s", account_id, new_tier.value, actor_id)
         
         return _build_sub_response(sub)
 
@@ -342,6 +354,7 @@ class RenewSubscriptionOperation(_CorporateOperation):
             subscription_id=sub.id,
             tier=sub.tier.value,
         ))
+        logger.info("Subscription renewed: account_id=%s (id=%s) by actor=%s", account_id, sub.id, actor_id)
         
         return _build_sub_response(sub)
 
@@ -352,6 +365,7 @@ class CheckBookingAllowanceOperation(_CorporateOperation):
         if not sub or not sub.is_active:
             return True   # non-subscribed corporate clients are not capped
         if sub.is_at_limit():
+            logger.warning("Subscription limit reached for account %s: %d/%d bookings used", account_id, sub.bookings_used, sub.bookings_limit)
             raise SubscriptionLimitError()
         return True
 

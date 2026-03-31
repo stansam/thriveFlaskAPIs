@@ -127,7 +127,10 @@ class CreateScheduleOperation(_FeeOperation):
 class ActivateScheduleOperation(_FeeOperation):
     def execute(self, schedule_id: str, actor_id: str) -> ServiceFeeScheduleResponse:
         with self._uow:
-            schedule = self._schedules.get_or_404(schedule_id)
+            schedule = self._schedules.get(schedule_id)
+            if not schedule:
+                raise NotFoundError("Fee Schedule", schedule_id)
+                
             self._schedules.deactivate_all(actor_id=actor_id)
             self._schedules.update(schedule, actor_id=actor_id, is_active=True)
             
@@ -154,7 +157,10 @@ class DeactivateScheduleOperation(_FeeOperation):
         from app.models import ServiceFeeSchedule
         
         with self._uow:
-            schedule = self._schedules.get_or_404(schedule_id)
+            schedule = self._schedules.get(schedule_id)
+            if not schedule:
+                raise NotFoundError("Fee Schedule", schedule_id)
+                
             if not schedule.is_active:
                 raise BadRequestError("Schedule is already inactive.")
                 
@@ -187,7 +193,9 @@ class AddFeeToScheduleOperation(_FeeOperation):
         self, schedule_id: str, data: ServiceFeeCreateRequest, actor_id: str
     ) -> ServiceFeeResponse:
         with self._uow:
-            self._schedules.get_or_404(schedule_id)
+            if not self._schedules.exists(id=schedule_id):
+                raise NotFoundError("Fee Schedule", schedule_id)
+                
             fee = self._fees.create(
                 actor_id=actor_id,
                 schedule_id=schedule_id,
@@ -206,7 +214,10 @@ class AddFeeToScheduleOperation(_FeeOperation):
 class UpdateFeeOperation(_FeeOperation):
     def execute(self, fee_id: str, data: dict[str, Any], actor_id: str) -> ServiceFeeResponse:
         with self._uow:
-            fee = self._fees.get_or_404(fee_id)
+            fee = self._fees.get(fee_id)
+            if not fee:
+                raise NotFoundError("Service Fee", fee_id)
+                
             self._fees.update(fee, actor_id=actor_id, **{k: v for k, v in data.items() if v is not None})
             self._uow.commit()
 
@@ -220,7 +231,10 @@ class UpdateFeeOperation(_FeeOperation):
 class DeactivateFeeOperation(_FeeOperation):
     def execute(self, fee_id: str, actor_id: str) -> None:
         with self._uow:
-            fee = self._fees.get_or_404(fee_id)
+            fee = self._fees.get(fee_id)
+            if not fee:
+                raise NotFoundError("Service Fee", fee_id)
+                
             self._fees.update(fee, actor_id=actor_id, is_active=False)
             self._uow.commit()
 
@@ -239,6 +253,7 @@ class ResolveFeeOperation(_FeeOperation):
     ) -> Decimal:
         fee = self._fees.find_active_by_type(fee_type)
         if not fee:
+            logger.error("Fee resolution failed: No active fee found for type '%s'. This may indicate a configuration oversight.", fee_type.value)
             raise BadRequestError(
                 f"No active fee found for type '{fee_type.value}'. "
                 "Ensure a fee schedule is active."
@@ -287,4 +302,5 @@ class CreateSnapshotOperation(_FeeOperation):
             booking_id=booking_id,
             fee_id=snapshot.id,
         ))
+        logger.info("Fee snapshot created for booking %s: applied_amount=%s", booking_id, applied_amount)
         return ServiceFeeSnapshotResponse.model_validate(snapshot)

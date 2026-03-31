@@ -10,7 +10,7 @@ from app.core.events.dataclass.package import (
 
 @patch("app.interface.package.services.event_bus")
 def test_add_highlight(mock_bus, service, package_repo, package_highlight_repo, uow, mock_package, mock_highlight):
-    package_repo.get_or_404.return_value = mock_package
+    package_repo.get.return_value = mock_package
     package_highlight_repo.count.return_value = 0
     package_highlight_repo.create.return_value = mock_highlight
 
@@ -25,7 +25,7 @@ def test_add_highlight(mock_bus, service, package_repo, package_highlight_repo, 
 
 @patch("app.interface.package.services.event_bus")
 def test_update_highlight(mock_bus, service, package_highlight_repo, uow, mock_highlight):
-    package_highlight_repo.get_or_404.return_value = mock_highlight
+    package_highlight_repo.get.return_value = mock_highlight
 
     result = service.update_highlight("hl-123", {"text": "Updated View"}, actor_id="admin-1")
 
@@ -37,7 +37,7 @@ def test_update_highlight(mock_bus, service, package_highlight_repo, uow, mock_h
 
 @patch("app.interface.package.services.event_bus")
 def test_delete_highlight(mock_bus, service, package_highlight_repo, uow, mock_highlight):
-    package_highlight_repo.get_or_404.return_value = mock_highlight
+    package_highlight_repo.get.return_value = mock_highlight
 
     service.delete_highlight("hl-123", actor_id="admin-1")
 

@@ -96,7 +96,10 @@ class _ClientOperation(BaseService):
 
 class GetClientOperation(_ClientOperation):
     def execute(self, client_id: str) -> ClientResponse:
-        client = self._clients.get_or_404(client_id)
+        client = self._clients.get(client_id)
+        if not client:
+            raise NotFoundError("Client", client_id)
+            
         balance = self._loyalty.balance_for_client(client_id)
         
         from sqlalchemy import select
@@ -129,7 +132,7 @@ class ListClientsOperation(_ClientOperation):
         search: str | None = None,
         page: int = 1,
         per_page: int = 25,
-    ) -> dict:
+    ) -> dict[str, Any]:
         result = self._clients.paginate_clients(
             client_type=client_type,
             corporate_account_id=corporate_account_id,
@@ -169,8 +172,10 @@ class GetBookingHistoryOperation(_ClientOperation):
         status: BookingStatus | None = None,
         page: int = 1,
         per_page: int = 25,
-    ) -> dict:
-        self._clients.get_or_404(client_id)
+    ) -> dict[str, Any]:
+        if not self._clients.exists(id=client_id):
+            raise NotFoundError("Client", client_id)
+            
         result = self._bookings.paginate_bookings(
             client_id=client_id,
             status=status,
@@ -183,7 +188,9 @@ class GetBookingHistoryOperation(_ClientOperation):
 
 class GetLoyaltyBalanceOperation(_ClientOperation):
     def execute(self, client_id: str) -> LoyaltyBalanceResponse:
-        self._clients.get_or_404(client_id)
+        if not self._clients.exists(id=client_id):
+            raise NotFoundError("Client", client_id)
+            
         balance = self._loyalty.balance_for_client(client_id)
         entries = self._loyalty.find_by_client(client_id)
 
@@ -214,7 +221,8 @@ class CreateClientOperation(_ClientOperation):
             raise DuplicateEmailError(email)
 
         if data.referred_by_id:
-            self._clients.get_or_404(data.referred_by_id)
+            if not self._clients.exists(id=data.referred_by_id):
+                raise NotFoundError("Referrer Client", data.referred_by_id)
 
         payload = data.model_dump(exclude={"email"})
         client = self._clients.create(
@@ -254,7 +262,10 @@ class UpdateClientOperation(_ClientOperation):
         actor_id: str,
         get_op: GetClientOperation,
     ) -> ClientResponse:
-        client = self._clients.get_or_404(client_id)
+        client = self._clients.get(client_id)
+        if not client:
+            raise NotFoundError("Client", client_id)
+            
         before = self._snapshot(client)
         
         updates = data.model_dump(exclude_none=True)
@@ -289,7 +300,10 @@ class DeactivateClientOperation(_ClientOperation):
         actor_id: str,
         get_op: GetClientOperation,
     ) -> ClientResponse:
-        client = self._clients.get_or_404(client_id)
+        client = self._clients.get(client_id)
+        if not client:
+            raise NotFoundError("Client", client_id)
+            
         active_statuses = [
             BookingStatus.PENDING_PAYMENT,
             BookingStatus.PAYMENT_RECEIVED,
@@ -299,6 +313,7 @@ class DeactivateClientOperation(_ClientOperation):
         for status in active_statuses:
             bookings = self._bookings.find_by_client(client_id, status=status)
             if bookings:
+                logger.warning("Deactivation failed: Client %s has %d active bookings", client_id, len(bookings))
                 raise BadRequestError(
                     f"Cannot deactivate client with {len(bookings)} active booking(s). "
                     f"Cancel or complete them first."
@@ -324,7 +339,9 @@ class DeactivateClientOperation(_ClientOperation):
 
 class GetClientPreferenceOperation(_ClientOperation):
     def execute(self, client_id: str) -> ClientPreferenceResponse:
-        self._clients.get_or_404(client_id)
+        if not self._clients.exists(id=client_id):
+            raise NotFoundError("Client", client_id)
+            
         pref = self._client_prefs.get_or_create(client_id=client_id)
         self._uow.commit()
         return ClientPreferenceResponse.model_validate(pref)
@@ -337,7 +354,9 @@ class UpdateClientPreferenceOperation(_ClientOperation):
         data: ClientPreferenceUpdateRequest,
         actor_id: str,
     ) -> ClientPreferenceResponse:
-        self._clients.get_or_404(client_id)
+        if not self._clients.exists(id=client_id):
+            raise NotFoundError("Client", client_id)
+            
         pref = self._client_prefs.get_or_create(
             client_id=client_id, actor_id=actor_id
         )

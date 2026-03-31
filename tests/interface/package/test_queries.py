@@ -5,31 +5,31 @@ from unittest.mock import MagicMock
 from app.core.errors.handlers import NotFoundError
 
 def test_get_package_success(service, package_repo, mock_package):
-    package_repo.get_or_404.return_value = mock_package
+    package_repo.get.return_value = mock_package
     result = service.get_package("pkg-123")
     assert result.id == "pkg-123"
     assert result.title == "Kenya Safari"
-    package_repo.get_or_404.assert_called_once_with("pkg-123")
+    package_repo.get.assert_called_once_with("pkg-123")
 
 
 def test_get_package_with_cover(service, package_repo, mock_package, mock_cover_media):
     mock_package.media = [mock_cover_media]
-    package_repo.get_or_404.return_value = mock_package
+    package_repo.get.return_value = mock_package
     result = service.get_package("pkg-123")
     assert result.cover_image_url == "https://cdn.example.com/cover.jpg"
 
 
 def test_get_package_not_found(service, package_repo):
-    package_repo.get_or_404.side_effect = NotFoundError("Package not found")
+    package_repo.get.side_effect = NotFoundError("Package not found")
     with pytest.raises(NotFoundError):
         service.get_package("invalid-id")
 
 
 def test_get_package_by_slug_success(service, package_repo, mock_package):
-    package_repo.find_by_slug_or_404.return_value = mock_package
+    package_repo.find_by_slug.return_value = mock_package
     result = service.get_package_by_slug("kenya-safari")
     assert result.slug == "kenya-safari"
-    package_repo.find_by_slug_or_404.assert_called_once_with("kenya-safari")
+    package_repo.find_by_slug.assert_called_once_with("kenya-safari")
 
 
 def test_list_packages(service, package_repo, mock_package):

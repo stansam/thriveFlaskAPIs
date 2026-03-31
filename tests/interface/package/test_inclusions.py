@@ -10,7 +10,7 @@ from app.core.events.dataclass.package import (
 
 @patch("app.interface.package.services.event_bus")
 def test_add_inclusion(mock_bus, service, package_repo, package_inclusion_repo, uow, mock_package, mock_inclusion):
-    package_repo.get_or_404.return_value = mock_package
+    package_repo.get.return_value = mock_package
     package_inclusion_repo.create.return_value = mock_inclusion
 
     req = PackageInclusionCreateRequest.model_validate({
@@ -29,7 +29,7 @@ def test_add_inclusion(mock_bus, service, package_repo, package_inclusion_repo, 
 
 @patch("app.interface.package.services.event_bus")
 def test_update_inclusion(mock_bus, service, package_inclusion_repo, uow, mock_inclusion):
-    package_inclusion_repo.get_or_404.return_value = mock_inclusion
+    package_inclusion_repo.get.return_value = mock_inclusion
 
     result = service.update_inclusion("inc-1", {"label": "Updated Drinks"}, actor_id="admin-1")
 
@@ -41,7 +41,7 @@ def test_update_inclusion(mock_bus, service, package_inclusion_repo, uow, mock_i
 
 @patch("app.interface.package.services.event_bus")
 def test_delete_inclusion(mock_bus, service, package_inclusion_repo, uow, mock_inclusion):
-    package_inclusion_repo.get_or_404.return_value = mock_inclusion
+    package_inclusion_repo.get.return_value = mock_inclusion
 
     service.delete_inclusion("inc-1", actor_id="admin-1")
 

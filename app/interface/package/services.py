@@ -102,13 +102,17 @@ class _PackageOperation(BaseService):
 # ── Queries ──
 class GetPackageOperation(_PackageOperation):
     def execute(self, package_id: str) -> TravelPackageResponse:
-        pkg = self._packages.get_or_404(package_id)
+        pkg = self._packages.get(package_id)
+        if not pkg:
+            raise NotFoundError("Package", package_id)
         return _build_package_response(pkg)
 
 
 class GetPackageBySlugOperation(_PackageOperation):
     def execute(self, slug: str) -> TravelPackageResponse:
-        pkg = self._packages.find_by_slug_or_404(slug)
+        pkg = self._packages.find_by_slug(slug)
+        if not pkg:
+            raise NotFoundError("Package", slug)
         return _build_package_response(pkg)
 
 
@@ -195,13 +199,18 @@ class CreatePackageOperation(_PackageOperation):
         logger.info("Package created: %s (id=%s) by actor=%s", pkg.title, pkg.id, actor_id)
         
         # We need to reload the entity post-commit to return the full DTO structure
-        return _build_package_response(self._packages.get_or_404(pkg.id))
+        pkg = self._packages.get(pkg.id)
+        if not pkg:
+            raise NotFoundError("Package", pkg.id)
+        return _build_package_response(pkg)
 
 
 class UpdatePackageOperation(_PackageOperation):
     def execute(self, package_id: str, data: TravelPackageUpdateRequest, actor_id: str) -> TravelPackageResponse:
         with self._uow:
-            pkg = self._packages.get_or_404(package_id)
+            pkg = self._packages.get(package_id)
+            if not pkg:
+                raise NotFoundError("Package", package_id)
             before = self._snapshot(pkg)
             updates = data.model_dump(exclude_none=True)
 
@@ -213,6 +222,7 @@ class UpdatePackageOperation(_PackageOperation):
 
             if "slug" in updates:
                 if self._packages.slug_exists(updates["slug"], exclude_id=package_id):
+                    logger.warning("Update failed: Slug '%s' already in use for package %s", updates["slug"], package_id)
                     raise DuplicateSlugError(f"Slug '{updates['slug']}' is already in use.")
 
             if updates:
@@ -240,7 +250,9 @@ class UpdatePackageOperation(_PackageOperation):
 class PublishPackageOperation(_PackageOperation):
     def execute(self, package_id: str, actor_id: str) -> TravelPackageResponse:
         with self._uow:
-            pkg = self._packages.get_or_404(package_id)
+            pkg = self._packages.get(package_id)
+            if not pkg:
+                raise NotFoundError("Package", package_id)
             errors: list[str] = []
             
             if not pkg.highlights:
@@ -255,6 +267,7 @@ class PublishPackageOperation(_PackageOperation):
                 errors.append("Package must have a cover image.")
                 
             if errors:
+                logger.warning("Publish failed for Package %s: %s", package_id, "; ".join(errors))
                 raise BadRequestError("Package cannot be published: " + "; ".join(errors))
 
             self._packages.update(pkg, actor_id=actor_id, status=PackageStatus.ACTIVE)
@@ -281,7 +294,9 @@ class PublishPackageOperation(_PackageOperation):
 class PausePackageOperation(_PackageOperation):
     def execute(self, package_id: str, actor_id: str) -> TravelPackageResponse:
         with self._uow:
-            pkg = self._packages.get_or_404(package_id)
+            pkg = self._packages.get(package_id)
+            if not pkg:
+                raise NotFoundError("Package", package_id)
             self._packages.update(pkg, actor_id=actor_id, status=PackageStatus.PAUSED)
             
             self._audits.log(
@@ -304,7 +319,9 @@ class PausePackageOperation(_PackageOperation):
 class ArchivePackageOperation(_PackageOperation):
     def execute(self, package_id: str, actor_id: str) -> TravelPackageResponse:
         with self._uow:
-            pkg = self._packages.get_or_404(package_id)
+            pkg = self._packages.get(package_id)
+            if not pkg:
+                raise NotFoundError("Package", package_id)
             future_bookings = self._bookings.find_by_package(
                 package_id, status=BookingStatus.CONFIRMED
             )
@@ -335,7 +352,9 @@ class ArchivePackageOperation(_PackageOperation):
 class DuplicatePackageOperation(_PackageOperation):
     def execute(self, package_id: str, actor_id: str) -> TravelPackageResponse:
         with self._uow:
-            src = self._packages.get_or_404(package_id)
+            src = self._packages.get(package_id)
+            if not src:
+                raise NotFoundError("Package", package_id)
             new_title = f"{src.title} (Copy)"
             new_slug  = slugify(new_title)
             
@@ -404,7 +423,10 @@ class DuplicatePackageOperation(_PackageOperation):
         ))
         logger.info("Package duplicated: %s (id=%s) -> %s (id=%s) by actor=%s", src.title, src.id, new_title, clone.id, actor_id)
         
-        return _build_package_response(self._packages.get_or_404(clone.id))
+        pkg = self._packages.get(clone.id)
+        if not pkg:
+            raise NotFoundError("Package", clone.id)
+        return _build_package_response(pkg)
 
 
 # ── Highlights ──
@@ -414,7 +436,8 @@ class AddHighlightOperation(_PackageOperation):
         from app.models import PackageHighlight
         
         with self._uow:
-            self._packages.get_or_404(package_id)
+            if not self._packages.exists(id=package_id):
+                raise NotFoundError("Package", package_id)
             stmt = select(PackageHighlight).where(PackageHighlight.package_id == package_id)
             max_order = self._highlights.count(stmt)
             
@@ -431,7 +454,9 @@ class AddHighlightOperation(_PackageOperation):
 class UpdateHighlightOperation(_PackageOperation):
     def execute(self, highlight_id: str, data: dict[str, Any], actor_id: str) -> PackageHighlightResponse:
         with self._uow:
-            h = self._highlights.get_or_404(highlight_id)
+            h = self._highlights.get(highlight_id)
+            if not h:
+                raise NotFoundError("Package Highlight", highlight_id)
             self._highlights.update(h, actor_id=actor_id, **{k: v for k, v in data.items() if v is not None})
             self._uow.commit()
 
@@ -442,7 +467,9 @@ class UpdateHighlightOperation(_PackageOperation):
 class DeleteHighlightOperation(_PackageOperation):
     def execute(self, highlight_id: str, actor_id: str) -> None:
         with self._uow:
-            h = self._highlights.get_or_404(highlight_id)
+            h = self._highlights.get(highlight_id)
+            if not h:
+                raise NotFoundError("Package Highlight", highlight_id)
             self._highlights.delete(h)
             self._uow.commit()
             
@@ -460,7 +487,8 @@ class ReorderHighlightsOperation(_PackageOperation):
 class AddInclusionOperation(_PackageOperation):
     def execute(self, package_id: str, data: PackageInclusionCreateRequest, actor_id: str) -> PackageInclusionResponse:
         with self._uow:
-            self._packages.get_or_404(package_id)
+            if not self._packages.exists(id=package_id):
+                raise NotFoundError("Package", package_id)
             inc = self._inclusions.create(
                 actor_id=actor_id, package_id=package_id, **data.model_dump()
             )
@@ -473,7 +501,9 @@ class AddInclusionOperation(_PackageOperation):
 class UpdateInclusionOperation(_PackageOperation):
     def execute(self, inclusion_id: str, data: dict[str, Any], actor_id: str) -> PackageInclusionResponse:
         with self._uow:
-            inc = self._inclusions.get_or_404(inclusion_id)
+            inc = self._inclusions.get(inclusion_id)
+            if not inc:
+                raise NotFoundError("Package Inclusion", inclusion_id)
             self._inclusions.update(inc, actor_id=actor_id, **{k: v for k, v in data.items() if v is not None})
             self._uow.commit()
 
@@ -484,7 +514,9 @@ class UpdateInclusionOperation(_PackageOperation):
 class DeleteInclusionOperation(_PackageOperation):
     def execute(self, inclusion_id: str, actor_id: str) -> None:
         with self._uow:
-            inc = self._inclusions.get_or_404(inclusion_id)
+            inc = self._inclusions.get(inclusion_id)
+            if not inc:
+                raise NotFoundError("Package Inclusion", inclusion_id)
             self._inclusions.delete(inc)
             self._uow.commit()
             
@@ -493,9 +525,10 @@ class DeleteInclusionOperation(_PackageOperation):
 
 # ── Itinerary Days ──
 class AddItineraryDayOperation(_PackageOperation):
-    def execute(self, package_id: str, data: PackageItineraryDayCreateRequest, actor_id: str) -> PackageItineraryDayResponse:
+    def execute(self, package_id: str, data: PackageInineraryDayCreateRequest, actor_id: str) -> PackageInineraryDayResponse:
         with self._uow:
-            self._packages.get_or_404(package_id)
+            if not self._packages.exists(id=package_id):
+                raise NotFoundError("Package", package_id)
             expected = self._itineraries.max_day_number(package_id) + 1
             if data.day_number != expected:
                 raise BadRequestError(
@@ -512,9 +545,11 @@ class AddItineraryDayOperation(_PackageOperation):
 
 
 class UpdateItineraryDayOperation(_PackageOperation):
-    def execute(self, day_id: str, data: PackageItineraryDayUpdateRequest, actor_id: str) -> PackageItineraryDayResponse:
+    def execute(self, day_id: str, data: PackageInineraryDayUpdateRequest, actor_id: str) -> PackageInineraryDayResponse:
         with self._uow:
-            day = self._itineraries.get_or_404(day_id)
+            day = self._itineraries.get(day_id)
+            if not day:
+                raise NotFoundError("Package Itinerary Day", day_id)
             updates = data.model_dump(exclude_none=True)
             if updates:
                 self._itineraries.update(day, actor_id=actor_id, **updates)
@@ -528,7 +563,9 @@ class UpdateItineraryDayOperation(_PackageOperation):
 class DeleteItineraryDayOperation(_PackageOperation):
     def execute(self, day_id: str, actor_id: str) -> None:
         with self._uow:
-            day = self._itineraries.get_or_404(day_id)
+            day = self._itineraries.get(day_id)
+            if not day:
+                raise NotFoundError("Package Itinerary Day", day_id)
             self._itineraries.delete(day)
             self._uow.commit()
             
@@ -539,7 +576,8 @@ class DeleteItineraryDayOperation(_PackageOperation):
 class AddPriceTierOperation(_PackageOperation):
     def execute(self, package_id: str, data: PackagePriceTierCreateRequest, actor_id: str) -> PackagePriceTierResponse:
         with self._uow:
-            self._packages.get_or_404(package_id)
+            if not self._packages.exists(id=package_id):
+                raise NotFoundError("Package", package_id)
             existing = self._tiers.find_by_package(package_id, active_only=True)
             for ex in existing:
                 if not ex.is_add_on and not data.is_add_on:
@@ -562,7 +600,9 @@ class AddPriceTierOperation(_PackageOperation):
 class UpdatePriceTierOperation(_PackageOperation):
     def execute(self, tier_id: str, data: PackagePriceTierUpdateRequest, actor_id: str) -> PackagePriceTierResponse:
         with self._uow:
-            tier = self._tiers.get_or_404(tier_id)
+            tier = self._tiers.get(tier_id)
+            if not tier:
+                raise NotFoundError("Package Price Tier", tier_id)
             updates = data.model_dump(exclude_none=True)
             if updates:
                 self._tiers.update(tier, actor_id=actor_id, **updates)
@@ -575,7 +615,9 @@ class UpdatePriceTierOperation(_PackageOperation):
 class DeactivatePriceTierOperation(_PackageOperation):
     def execute(self, tier_id: str, actor_id: str) -> None:
         with self._uow:
-            tier = self._tiers.get_or_404(tier_id)
+            tier = self._tiers.get(tier_id)
+            if not tier:
+                raise NotFoundError("Package Price Tier", tier_id)
             self._tiers.update(tier, actor_id=actor_id, is_active=False)
             self._uow.commit()
 

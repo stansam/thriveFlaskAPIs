@@ -150,13 +150,13 @@ def mock_pref() -> MagicMock:
 # ── Tests: Get & List ──────────────────────────────────────────────────────────
 
 def test_get_user_success(service, user_repo, mock_user):
-    user_repo.get_or_404.return_value = mock_user
+    user_repo.get.return_value = mock_user
 
     result = service.get_user("user-abc-123")
 
     assert result.id == "user-abc-123"
     assert result.email == "test@thrive.com"
-    user_repo.get_or_404.assert_called_once_with("user-abc-123")
+    user_repo.get.assert_called_once_with("user-abc-123")
 
 
 def test_get_user_by_email_success(service, user_repo, mock_user):
@@ -257,7 +257,7 @@ def test_create_user_duplicate_email(service, user_repo):
 
 @patch("app.interface.user.services.event_bus")
 def test_update_user_success(mock_bus, service, user_repo, audit_service, uow, mock_user):
-    user_repo.get_or_404.return_value = mock_user
+    user_repo.get.return_value = mock_user
 
     req = UserUpdateRequest.model_validate({
         "full_name": "Updated Name"
@@ -277,7 +277,7 @@ def test_update_user_success(mock_bus, service, user_repo, audit_service, uow, m
 
 @patch("app.interface.user.services.event_bus")
 def test_deactivate_user_success(mock_bus, service, user_repo, audit_service, uow, mock_user):
-    user_repo.get_or_404.return_value = mock_user
+    user_repo.get.return_value = mock_user
 
     result = service.deactivate_user("user-abc-123", actor_id="admin-123")
 
@@ -289,7 +289,7 @@ def test_deactivate_user_success(mock_bus, service, user_repo, audit_service, uo
 
 def test_deactivate_last_super_admin(service, user_repo, mock_user):
     mock_user.role = UserRole.SUPER_ADMIN
-    user_repo.get_or_404.return_value = mock_user
+    user_repo.get.return_value = mock_user
     user_repo.find_active_by_role.return_value = [mock_user]  # Only 1 active
 
     with pytest.raises(BadRequestError):
@@ -299,7 +299,7 @@ def test_deactivate_last_super_admin(service, user_repo, mock_user):
 @patch("app.interface.user.services.event_bus")
 def test_reactivate_user_success(mock_bus, service, user_repo, audit_service, uow, mock_user):
     mock_user.is_active = False
-    user_repo.get_or_404.return_value = mock_user
+    user_repo.get.return_value = mock_user
 
     result = service.reactivate_user("user-abc-123", actor_id="admin-123")
 
@@ -313,7 +313,7 @@ def test_reactivate_user_success(mock_bus, service, user_repo, audit_service, uo
 # ── Tests: Preferences ─────────────────────────────────────────────────────────
 
 def test_get_preference_success(service, user_repo, user_preference_repo, uow, mock_user, mock_pref):
-    user_repo.get_or_404.return_value = mock_user
+    user_repo.get.return_value = mock_user
     user_preference_repo.get_or_create.return_value = mock_pref
 
     result = service.get_preference("user-abc-123")
@@ -325,7 +325,7 @@ def test_get_preference_success(service, user_repo, user_preference_repo, uow, m
 
 @patch("app.interface.user.services.event_bus")
 def test_update_preference_success(mock_bus, service, user_repo, user_preference_repo, uow, mock_user, mock_pref):
-    user_repo.get_or_404.return_value = mock_user
+    user_repo.get.return_value = mock_user
     user_preference_repo.get_or_create.return_value = mock_pref
 
     req = UserPreferenceUpdateRequest.model_validate({
