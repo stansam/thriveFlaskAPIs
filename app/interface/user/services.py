@@ -157,6 +157,7 @@ class UpdateUserOperation(_UserOperation):
         self._uow.commit()
 
         event_bus.publish(UserUpdatedEvent(user_id=user.id))
+        logger.info("User updated: %s (id=%s) fields=%s by actor=%s", user.email, user.id, list(updates.keys()), actor_id)
         return UserResponse.from_user(user)
 
 
@@ -187,6 +188,7 @@ class DeactivateUserOperation(_UserOperation):
         self._uow.commit()
 
         event_bus.publish(UserDeactivatedEvent(user_id=user.id))
+        logger.info("User deactivated: %s (id=%s) by actor=%s", user.email, user.id, actor_id)
         return UserResponse.from_user(user)
 
 
@@ -209,6 +211,7 @@ class ReactivateUserOperation(_UserOperation):
         self._uow.commit()
 
         event_bus.publish(UserReactivatedEvent(user_id=user.id))
+        logger.info("User reactivated: %s (id=%s) by actor=%s", user.email, user.id, actor_id)
         return UserResponse.from_user(user)
 
 
@@ -237,4 +240,5 @@ class UpdateUserPreferenceOperation(_UserOperation):
         self._uow.commit()
 
         event_bus.publish(UserPreferenceUpdatedEvent(user_id=user_id))
+        logger.info("User preferences updated: user_id=%s by actor=%s", user_id, actor_id)
         return UserPreferenceResponse.model_validate(pref)

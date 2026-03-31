@@ -85,7 +85,7 @@ class _CorporateOperation(BaseService):
         self._accounts = corporate_account_repo
         self._subscriptions = corporate_subscription_repo
         self._clients = client_repo
-        self._audit_svc = audit_service
+        self._audits = audit_service
         self._uow = uow
 
 
@@ -138,7 +138,7 @@ class CreateCorporateAccountOperation(_CorporateOperation):
                 **data.model_dump(),
             )
             
-            self._audit_svc.log(
+            self._audits.log(
                 action=AuditActionType.CREATE,
                 actor_id=actor_id,
                 entity_type="corporate_account",
@@ -153,6 +153,7 @@ class CreateCorporateAccountOperation(_CorporateOperation):
             account_id=account.id,
             company_name=account.company_name,
         ))
+        logger.info("Corporate account created: %s (id=%s) by actor=%s", account.company_name, account.id, actor_id)
         
         return get_op.execute(account.id)
 
@@ -169,7 +170,7 @@ class UpdateCorporateAccountOperation(_CorporateOperation):
             if updates:
                 self._accounts.update(account, actor_id=actor_id, **updates)
             
-            self._audit_svc.log(
+            self._audits.log(
                 action=AuditActionType.UPDATE,
                 actor_id=actor_id,
                 entity_type="corporate_account",
@@ -184,6 +185,7 @@ class UpdateCorporateAccountOperation(_CorporateOperation):
         event_bus.publish(CorporateAccountUpdatedEvent(
             account_id=account.id,
         ))
+        logger.info("Corporate account updated: %s (id=%s) fields=%s by actor=%s", account.company_name, account.id, list(updates.keys()), actor_id)
         
         return get_op.execute(account_id)
 
@@ -199,7 +201,7 @@ class DeactivateCorporateAccountOperation(_CorporateOperation):
                     account.subscription, actor_id=actor_id, is_active=False
                 )
             
-            self._audit_svc.log(
+            self._audits.log(
                 action=AuditActionType.UPDATE,
                 actor_id=actor_id,
                 entity_type="corporate_account",
@@ -213,6 +215,7 @@ class DeactivateCorporateAccountOperation(_CorporateOperation):
         event_bus.publish(CorporateAccountDeactivatedEvent(
             account_id=account.id,
         ))
+        logger.info("Corporate account deactivated: %s (id=%s) by actor=%s", account.company_name, account.id, actor_id)
 
 
 class CreateSubscriptionOperation(_CorporateOperation):
@@ -242,7 +245,7 @@ class CreateSubscriptionOperation(_CorporateOperation):
                 is_active=True,
             )
             
-            self._audit_svc.log(
+            self._audits.log(
                 action=AuditActionType.CREATE,
                 actor_id=actor_id,
                 entity_type="corporate_subscription",
@@ -258,6 +261,7 @@ class CreateSubscriptionOperation(_CorporateOperation):
             subscription_id=sub.id,
             tier=data.tier.value,
         ))
+        logger.info("Subscription created: %s for account_id=%s (sub_id=%s) by actor=%s", data.tier.value, data.account_id, sub.id, actor_id)
         
         return _build_sub_response(sub)
 
@@ -289,7 +293,7 @@ class UpgradeSubscriptionOperation(_CorporateOperation):
                 is_active=True,
             )
             
-            self._audit_svc.log(
+            self._audits.log(
                 action=AuditActionType.UPDATE,
                 actor_id=actor_id,
                 entity_type="corporate_subscription",
@@ -322,7 +326,7 @@ class RenewSubscriptionOperation(_CorporateOperation):
                 sub, new_start=new_start, new_end=new_end, actor_id=actor_id
             )
             
-            self._audit_svc.log(
+            self._audits.log(
                 action=AuditActionType.UPDATE,
                 actor_id=actor_id,
                 entity_type="corporate_subscription",
@@ -372,3 +376,4 @@ class IncrementBookingUsageOperation(_CorporateOperation):
                     bookings_used=sub.bookings_used,
                     bookings_limit=sub.bookings_limit,
                 ))
+                logger.warning("Subscription limit warning: account_id=%s reached %d/%d bookings", account_id, sub.bookings_used, sub.bookings_limit)

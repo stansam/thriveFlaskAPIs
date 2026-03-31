@@ -93,40 +93,8 @@ class _ClientOperation(BaseService):
         self._audits = audit_service
         self._uow = uow
 
-    # @staticmethod
-    # def _snapshot(obj: Any, fields: list[str] | None = None) -> dict:
-    #     """
-    #     Build a JSON-safe dict from an ORM object for audit snapshots.
-    #     """
-    #     if obj is None:
-    #         return {}
-    #     try:
-    #         from sqlalchemy import inspect
-    #         mapper = inspect(type(obj))
-    #         col_names = [c.key for c in mapper.columns]
-    #         if fields:
-    #             col_names = [f for f in fields if f in col_names]
-    #         return {
-    #             k: getattr(obj, k, None)
-    #             for k in col_names
-    #             if not k.startswith("password")
-    #         }
-    #     except Exception:
-    #         return {"id": getattr(obj, "id", None)}
 
-    # @staticmethod
-    # def _page_meta(page: Page) -> dict:
-    #     return {
-    #         "total":       page.total,
-    #         "page":        page.page,
-    #         "per_page":    page.per_page,
-    #         "total_pages": page.total_pages,
-    #         "has_next":    page.has_next,
-    #         "has_prev":    page.has_prev,
-    #     }
-
-
-class GetClientOperation(_BaseClientOperation):
+class GetClientOperation(_ClientOperation):
     def execute(self, client_id: str) -> ClientResponse:
         client = self._clients.get_or_404(client_id)
         balance = self._loyalty.balance_for_client(client_id)
@@ -144,7 +112,7 @@ class GetClientOperation(_BaseClientOperation):
         return resp
 
 
-class GetClientByEmailOperation(_BaseClientOperation):
+class GetClientByEmailOperation(_ClientOperation):
     def execute(self, email: str, get_op: GetClientOperation) -> ClientResponse:
         client = self._clients.find_by_email(email.lower().strip())
         if not client:
@@ -152,7 +120,7 @@ class GetClientByEmailOperation(_BaseClientOperation):
         return get_op.execute(client.id)
 
 
-class ListClientsOperation(_BaseClientOperation):
+class ListClientsOperation(_ClientOperation):
     def execute(
         self,
         client_type: ClientType | None = None,
@@ -178,7 +146,7 @@ class ListClientsOperation(_BaseClientOperation):
         return {"items": items, **self._page_meta(result)}
 
 
-class SearchClientsOperation(_BaseClientOperation):
+class SearchClientsOperation(_ClientOperation):
     def execute(self, query: str, limit: int = 10) -> list[ClientSummaryResponse]:
         result = self._clients.paginate_clients(search=query, page=1, per_page=min(limit, 20))
         return [
@@ -194,7 +162,7 @@ class SearchClientsOperation(_BaseClientOperation):
         ]
 
 
-class GetBookingHistoryOperation(_BaseClientOperation):
+class GetBookingHistoryOperation(_ClientOperation):
     def execute(
         self,
         client_id: str,
@@ -213,7 +181,7 @@ class GetBookingHistoryOperation(_BaseClientOperation):
         return {"items": items, **self._page_meta(result)}
 
 
-class GetLoyaltyBalanceOperation(_BaseClientOperation):
+class GetLoyaltyBalanceOperation(_ClientOperation):
     def execute(self, client_id: str) -> LoyaltyBalanceResponse:
         self._clients.get_or_404(client_id)
         balance = self._loyalty.balance_for_client(client_id)
@@ -234,7 +202,7 @@ class GetLoyaltyBalanceOperation(_BaseClientOperation):
         )
 
 
-class CreateClientOperation(_BaseClientOperation):
+class CreateClientOperation(_ClientOperation):
     def execute(
         self, 
         data: ClientCreateRequest, 
@@ -273,12 +241,12 @@ class CreateClientOperation(_BaseClientOperation):
             email=client.email,
             referred_by=client.referred_by_id,
         ))
-        logger.info("Client created: %s (id=%s)", email, client.id)
+        logger.info("Client created: %s (id=%s) by actor=%s", email, client.id, actor_id)
         
         return get_op.execute(client.id)
 
 
-class UpdateClientOperation(_BaseClientOperation):
+class UpdateClientOperation(_ClientOperation):
     def execute(
         self,
         client_id: str,
@@ -309,11 +277,12 @@ class UpdateClientOperation(_BaseClientOperation):
             client_id=client.id,
             fields_changed=list(updates.keys())
         ))
+        logger.info("Client updated: %s (id=%s) fields=%s by actor=%s", client.email, client.id, list(updates.keys()), actor_id)
 
         return get_op.execute(client_id)
 
 
-class DeactivateClientOperation(_BaseClientOperation):
+class DeactivateClientOperation(_ClientOperation):
     def execute(
         self, 
         client_id: str, 
@@ -349,10 +318,11 @@ class DeactivateClientOperation(_BaseClientOperation):
         self._uow.commit()
 
         event_bus.publish(ClientDeactivatedEvent(client_id=client.id))
+        logger.info("Client deactivated: %s (id=%s) by actor=%s", client.email, client.id, actor_id)
         return get_op.execute(client_id)
 
 
-class GetClientPreferenceOperation(_BaseClientOperation):
+class GetClientPreferenceOperation(_ClientOperation):
     def execute(self, client_id: str) -> ClientPreferenceResponse:
         self._clients.get_or_404(client_id)
         pref = self._client_prefs.get_or_create(client_id=client_id)
@@ -360,7 +330,7 @@ class GetClientPreferenceOperation(_BaseClientOperation):
         return ClientPreferenceResponse.model_validate(pref)
 
 
-class UpdateClientPreferenceOperation(_BaseClientOperation):
+class UpdateClientPreferenceOperation(_ClientOperation):
     def execute(
         self,
         client_id: str,

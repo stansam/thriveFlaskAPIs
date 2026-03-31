@@ -56,7 +56,7 @@ class _FeeOperation(BaseService):
         self._schedules = fee_schedule_repo
         self._fees = fee_repo
         self._snapshots = fee_snapshot_repo
-        self._audit_svc = audit_service
+        self._audits = audit_service
         self._uow = uow
 
 
@@ -106,7 +106,7 @@ class CreateScheduleOperation(_FeeOperation):
                     is_active=True,
                 )
             
-            self._audit_svc.log(
+            self._audits.log(
                 action=AuditActionType.CREATE,
                 actor_id=actor_id,
                 entity_type="fee_schedule",
@@ -120,6 +120,7 @@ class CreateScheduleOperation(_FeeOperation):
             schedule_id=schedule.id,
             name=schedule.name,
         ))
+        logger.info("Fee schedule created: %s (id=%s) by actor=%s", schedule.name, schedule.id, actor_id)
         return ServiceFeeScheduleResponse.model_validate(schedule)
 
 
@@ -130,7 +131,7 @@ class ActivateScheduleOperation(_FeeOperation):
             self._schedules.deactivate_all(actor_id=actor_id)
             self._schedules.update(schedule, actor_id=actor_id, is_active=True)
             
-            self._audit_svc.log(
+            self._audits.log(
                 action=AuditActionType.UPDATE,
                 actor_id=actor_id,
                 entity_type="fee_schedule",
@@ -143,6 +144,7 @@ class ActivateScheduleOperation(_FeeOperation):
         event_bus.publish(FeeScheduleActivatedEvent(
             schedule_id=schedule.id,
         ))
+        logger.info("Fee schedule activated: %s (id=%s) by actor=%s", schedule.name, schedule.id, actor_id)
         return ServiceFeeScheduleResponse.model_validate(schedule)
 
 
@@ -164,7 +166,7 @@ class DeactivateScheduleOperation(_FeeOperation):
                 
             self._schedules.update(schedule, actor_id=actor_id, is_active=False)
             
-            self._audit_svc.log(
+            self._audits.log(
                 action=AuditActionType.UPDATE, 
                 actor_id=actor_id,
                 entity_type="fee_schedule", 
@@ -177,6 +179,7 @@ class DeactivateScheduleOperation(_FeeOperation):
         event_bus.publish(FeeScheduleDeactivatedEvent(
             schedule_id=schedule.id,
         ))
+        logger.info("Fee schedule deactivated: %s (id=%s) by actor=%s", schedule.name, schedule.id, actor_id)
 
 
 class AddFeeToScheduleOperation(_FeeOperation):
@@ -196,6 +199,7 @@ class AddFeeToScheduleOperation(_FeeOperation):
             schedule_id=schedule_id,
             fee_id=fee.id,
         ))
+        logger.info("Service fee added to schedule %s: %s (id=%s) by actor=%s", schedule_id, fee.label, fee.id, actor_id)
         return ServiceFeeResponse.model_validate(fee)
 
 
@@ -209,6 +213,7 @@ class UpdateFeeOperation(_FeeOperation):
         event_bus.publish(ServiceFeeUpdatedEvent(
             fee_id=fee.id,
         ))
+        logger.info("Service fee updated: %s (id=%s) by actor=%s", fee.label, fee.id, actor_id)
         return ServiceFeeResponse.model_validate(fee)
 
 

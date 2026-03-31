@@ -95,7 +95,7 @@ class _PackageOperation(BaseService):
         self._tiers = package_price_tier_repo
         self._media = package_media_repo
         self._bookings = package_booking_repo
-        self._audit_svc = audit_service
+        self._audits = audit_service
         self._uow = uow
 
 
@@ -178,7 +178,7 @@ class CreatePackageOperation(_PackageOperation):
             for t in data.price_tiers:
                 self._tiers.create(actor_id=actor_id, package_id=pkg.id, **t.model_dump())
 
-            self._audit_svc.log(
+            self._audits.log(
                 action=AuditActionType.CREATE,
                 actor_id=actor_id,
                 entity_type="travel_package",
@@ -192,6 +192,7 @@ class CreatePackageOperation(_PackageOperation):
         event_bus.publish(PackageCreatedEvent(
             package_id=pkg.id, title=pkg.title, actor_id=actor_id
         ))
+        logger.info("Package created: %s (id=%s) by actor=%s", pkg.title, pkg.id, actor_id)
         
         # We need to reload the entity post-commit to return the full DTO structure
         return _build_package_response(self._packages.get_or_404(pkg.id))
@@ -217,7 +218,7 @@ class UpdatePackageOperation(_PackageOperation):
             if updates:
                 self._packages.update(pkg, actor_id=actor_id, **updates)
 
-            self._audit_svc.log(
+            self._audits.log(
                 action=AuditActionType.UPDATE,
                 actor_id=actor_id,
                 entity_type="travel_package",
@@ -232,6 +233,7 @@ class UpdatePackageOperation(_PackageOperation):
         event_bus.publish(PackageUpdatedEvent(
             package_id=package_id, actor_id=actor_id
         ))
+        logger.info("Package updated: %s (id=%s) fields=%s by actor=%s", pkg.title, pkg.id, list(updates.keys()), actor_id)
         return _build_package_response(pkg)
 
 
@@ -257,7 +259,7 @@ class PublishPackageOperation(_PackageOperation):
 
             self._packages.update(pkg, actor_id=actor_id, status=PackageStatus.ACTIVE)
             
-            self._audit_svc.log(
+            self._audits.log(
                 action=AuditActionType.STATUS_CHANGE,
                 actor_id=actor_id,
                 entity_type="travel_package",
@@ -272,6 +274,7 @@ class PublishPackageOperation(_PackageOperation):
         event_bus.publish(PackagePublishedEvent(
             package_id=package_id, title=pkg.title, actor_id=actor_id
         ))
+        logger.info("Package published: %s (id=%s) by actor=%s", pkg.title, pkg.id, actor_id)
         return _build_package_response(pkg)
 
 
@@ -281,7 +284,7 @@ class PausePackageOperation(_PackageOperation):
             pkg = self._packages.get_or_404(package_id)
             self._packages.update(pkg, actor_id=actor_id, status=PackageStatus.PAUSED)
             
-            self._audit_svc.log(
+            self._audits.log(
                 action=AuditActionType.STATUS_CHANGE,
                 actor_id=actor_id,
                 entity_type="travel_package",
@@ -294,6 +297,7 @@ class PausePackageOperation(_PackageOperation):
         event_bus.publish(PackagePausedEvent(
             package_id=package_id, actor_id=actor_id
         ))
+        logger.info("Package paused: %s (id=%s) by actor=%s", pkg.title, pkg.id, actor_id)
         return _build_package_response(pkg)
 
 
@@ -311,7 +315,7 @@ class ArchivePackageOperation(_PackageOperation):
                 
             self._packages.update(pkg, actor_id=actor_id, status=PackageStatus.ARCHIVED)
             
-            self._audit_svc.log(
+            self._audits.log(
                 action=AuditActionType.STATUS_CHANGE,
                 actor_id=actor_id,
                 entity_type="travel_package",
@@ -324,6 +328,7 @@ class ArchivePackageOperation(_PackageOperation):
         event_bus.publish(PackageArchivedEvent(
             package_id=package_id, actor_id=actor_id
         ))
+        logger.info("Package archived: %s (id=%s) by actor=%s", pkg.title, pkg.id, actor_id)
         return _build_package_response(pkg)
 
 
@@ -384,7 +389,7 @@ class DuplicatePackageOperation(_PackageOperation):
                     is_add_on=t.is_add_on, is_active=t.is_active
                 )
 
-            self._audit_svc.log(
+            self._audits.log(
                 action=AuditActionType.CREATE,
                 actor_id=actor_id,
                 entity_type="travel_package",
@@ -397,6 +402,7 @@ class DuplicatePackageOperation(_PackageOperation):
         event_bus.publish(PackageDuplicatedEvent(
             source_package_id=package_id, new_package_id=clone.id, new_title=new_title, actor_id=actor_id
         ))
+        logger.info("Package duplicated: %s (id=%s) -> %s (id=%s) by actor=%s", src.title, src.id, new_title, clone.id, actor_id)
         
         return _build_package_response(self._packages.get_or_404(clone.id))
 
