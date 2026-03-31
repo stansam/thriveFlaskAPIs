@@ -13,6 +13,9 @@ from app.repository import (
     loyalty_repo,
     corporate_account_repo,
     corporate_subscription_repo,
+    fee_schedule_repo,
+    fee_repo,
+    fee_snapshot_repo,
 )
 from app.core.unit_of_work import SQLAlchemyUnitOfWork
 from app.core.token_denylist import RedisTokenDenylist
@@ -20,6 +23,7 @@ from app.interface.auth import AuthService
 from app.interface.user import UserService
 from app.interface.client import ClientService
 from app.interface.corporate import CorporateService
+from app.interface.fee import FeeService
 from app.interface.audit import audit_service
 
 
@@ -61,6 +65,14 @@ class _ServiceRegistry:
         uow=SQLAlchemyUnitOfWork(),
     )
 
+    fee: FeeService = FeeService(
+        fee_schedule_repo=fee_schedule_repo,
+        fee_repo=fee_repo,
+        fee_snapshot_repo=fee_snapshot_repo,
+        audit_service=audit_service,
+        uow=SQLAlchemyUnitOfWork(),
+    )
+
 
 # Exported singleton
 registry = _ServiceRegistry()
@@ -70,6 +82,7 @@ auth_service = registry.auth
 user_service = registry.user
 client_service = registry.client
 corporate_service = registry.corporate
+fee_service = registry.fee
 
 __all__ = [
     "registry",
@@ -77,4 +90,5 @@ __all__ = [
     "user_service",
     "client_service",
     "corporate_service",
+    "fee_service",
 ]

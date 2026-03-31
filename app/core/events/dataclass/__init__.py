@@ -18,6 +18,12 @@ from app.core.events.dataclass.corporate import(
     SubscriptionRenewedEvent, SubscriptionLimitWarningEvent
 )
 
+from app.core.events.dataclass.fee import(
+    FeeScheduleCreatedEvent, FeeScheduleActivatedEvent, FeeScheduleDeactivatedEvent,
+    ServiceFeeAddedEvent, ServiceFeeUpdatedEvent, ServiceFeeDeactivatedEvent,
+    FeeSnapshotCreatedEvent
+)
+
 from app.core.events.dataclass.package import(
     PackagePublishedEvent
 )
@@ -59,6 +65,13 @@ __all__ = [
     "SubscriptionUpgradedEvent",
     "SubscriptionRenewedEvent",
     "SubscriptionLimitWarningEvent",
+    "FeeScheduleCreatedEvent",
+    "FeeScheduleActivatedEvent",
+    "FeeScheduleDeactivatedEvent",
+    "ServiceFeeAddedEvent",
+    "ServiceFeeUpdatedEvent",
+    "ServiceFeeDeactivatedEvent",
+    "FeeSnapshotCreatedEvent",
     "PackagePublishedEvent",
     "PaymentReceivedEvent",
     "PaymentRefundedEvent",
