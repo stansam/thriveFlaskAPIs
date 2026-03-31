@@ -13,6 +13,8 @@ from app.core.events.dataclass.client import(
 )
 
 from app.core.events.dataclass.corporate import(
+    CorporateAccountCreatedEvent, CorporateAccountUpdatedEvent, CorporateAccountDeactivatedEvent,
+    SubscriptionCreatedEvent, SubscriptionUpgradedEvent,
     SubscriptionRenewedEvent, SubscriptionLimitWarningEvent
 )
 
@@ -50,6 +52,11 @@ __all__ = [
     "ClientUpdatedEvent",
     "ClientDeactivatedEvent",
     "ClientPreferenceUpdatedEvent",
+    "CorporateAccountCreatedEvent",
+    "CorporateAccountUpdatedEvent",
+    "CorporateAccountDeactivatedEvent",
+    "SubscriptionCreatedEvent",
+    "SubscriptionUpgradedEvent",
     "SubscriptionRenewedEvent",
     "SubscriptionLimitWarningEvent",
     "PackagePublishedEvent",

@@ -11,12 +11,15 @@ from app.repository import (
     client_preference_repo,
     booking_repo,
     loyalty_repo,
+    corporate_account_repo,
+    corporate_subscription_repo,
 )
 from app.core.unit_of_work import SQLAlchemyUnitOfWork
 from app.core.token_denylist import RedisTokenDenylist
 from app.interface.auth import AuthService
 from app.interface.user import UserService
 from app.interface.client import ClientService
+from app.interface.corporate import CorporateService
 from app.interface.audit import audit_service
 
 
@@ -50,6 +53,14 @@ class _ServiceRegistry:
         uow=SQLAlchemyUnitOfWork(),
     )
 
+    corporate: CorporateService = CorporateService(
+        corporate_account_repo=corporate_account_repo,
+        corporate_subscription_repo=corporate_subscription_repo,
+        client_repo=client_repo,
+        audit_service=audit_service,
+        uow=SQLAlchemyUnitOfWork(),
+    )
+
 
 # Exported singleton
 registry = _ServiceRegistry()
@@ -58,10 +69,12 @@ registry = _ServiceRegistry()
 auth_service = registry.auth
 user_service = registry.user
 client_service = registry.client
+corporate_service = registry.corporate
 
 __all__ = [
     "registry",
     "auth_service",
     "user_service",
     "client_service",
+    "corporate_service",
 ]
