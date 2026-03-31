@@ -44,15 +44,17 @@ class AuditService(BaseService):
         description: str | None = None,
         ip_address:  str | None = None,
         user_agent:  str | None = None,
-    ) -> AuditLog:
+        strict:      bool = True,
+    ) -> AuditLog | None:
         """
         Write a single immutable audit log entry.
 
         This method flushes but does NOT commit.  The calling service owns
         the transaction and must commit after calling this.
 
-        Never raises — audit failures are logged at ERROR level and the
-        method returns None rather than breaking the parent operation.
+        If `strict=True`, raises an exception if the audit log cannot be
+        written. If `strict=False`, failures are logged at ERROR level
+        and the method returns None to avoid breaking the parent operation.
         """
         try:
             entry = audit_repo.create(
@@ -72,6 +74,9 @@ class AuditService(BaseService):
                 "AuditService.log failed [%s %s/%s]: %s",
                 action.value, entity_type, entity_id, exc,
             )
+            if strict:
+                from app.core.errors.handlers import BusinessRuleViolationError # Or raise directly
+                raise RuntimeError(f"Strict audit log writing failed: {str(exc)}") from exc
             return None
     # Read
     def get_entity_history(

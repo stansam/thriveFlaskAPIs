@@ -1,22 +1,17 @@
 """
-Authentication Service.
+Separated Operations for AuthService.
 
-Provides domain operations for authentication, session management,
-passwords, and MFA lifecycle. Uses flask-login for establishing sessions.
-Orchestrates domain models, handles business logic, and logs audit events.
-
-Transaction boundary: every write method commits via an injected
-`IUnitOfWork`; the service never touches repository session internals.
+Following CQRS and single-responsibility principles, each use-case 
+is encapsulated in its own operation class. They are all orchestrated 
+by the AuthService facade.
 """
 from __future__ import annotations
 
-import json
 import logging
 from datetime import datetime, timezone
-from typing import Final
-from argon2 import PasswordHasher
 
 from flask_login import login_user, logout_user
+from argon2 import PasswordHasher
 
 from app.core.errors.handlers import (
     MFARequiredError,
@@ -53,117 +48,34 @@ from app.dto import LoginRequest, PasswordChangeRequest, ForgotPasswordResponse,
 from app.dto.user import UserResponse, MFASetupResponse
 from app.enums import AuditActionType
 from app.repository.user import UserRepository
-from app.repository.audit import AuditLogRepository
+from app.interface.audit import AuditService
 
 logger: logging.Logger = get_logger(__name__)
 
-# Pre-computed Argon2id hash used as a constant-time dummy when the
-# requested email does not exist. Prevents timing-based user enumeration.
-# Generated once: `from argon2 import PasswordHasher; PasswordHasher().hash("_dummy_")`
-# _DUMMY_HASH: Final[str] = (
-#     "$argon2id$v=19$m=65536,t=3,p=4"
-#     "$c29tZXNhbHRzb21lc2FsdA"
-#     "$Vf1zUYMDe1RrMEHhJFUTLx5WwC/4zJXX3gM8Bq7N8Ko"
-# )
 
-
-class AuthService:
-    """Service handling authentication flows and security management.
-
-    Responsibilities
-    ----------------
-    - Login / logout with Flask-Login session management
-    - Password change with current-password verification
-    - HMAC-signed password-reset flow with Redis-backed single-use denylist
-    - TOTP MFA enrollment, confirmation, and disablement
-    - Immutable audit log writes for every state change
-    - Domain event dispatch after successful operations
-
-    Dependencies (injected via constructor)
-    ----------------------------------------
-    user_repo   : UserRepository
-    audit_repo  : AuditLogRepository
-    uow         : IUnitOfWork     — owns commit/rollback boundary
-    denylist    : ITokenDenylist  — single-use reset token enforcement
-    """
+class _BaseAuthOperation:
+    """Base dependencies for auth operations."""
 
     def __init__(
         self,
         user_repo: UserRepository,
-        audit_repo: AuditLogRepository,
+        audit_service: AuditService,
         uow: IUnitOfWork,
         denylist: ITokenDenylist,
     ) -> None:
         self._users = user_repo
-        self._audits = audit_repo
+        self._audits = audit_service
         self._uow = uow
         self._denylist = denylist
 
 
-    #  Private helpers
-    def _write_audit(
-        self,
-        action: AuditActionType,
-        actor_id: str | None,
-        entity_type: str,
-        entity_id: str | None = None,
-        description: str | None = None,
-        before: dict[str, object] | None = None,
-        after: dict[str, object] | None = None,
-        ip_address: str | None = None,
-        user_agent: str | None = None,
-    ) -> None:
-        """Write an immutable audit log entry within the current session.
-
-        Args:
-            action: The audit action type enum value.
-            actor_id: UUID string of the user performing the action, or None.
-            entity_type: The resource type string (e.g. "user").
-            entity_id: UUID string of the affected resource, or None.
-            description: Human-readable summary of the event.
-            before: Before-state snapshot (password fields must be redacted).
-            after: After-state snapshot (password fields must be redacted).
-            ip_address: Request originator IP, or None.
-            user_agent: HTTP User-Agent string, or None.
-        """
-        self._audits.create(
-            actor_id=actor_id,
-            action=action,
-            entity_type=entity_type,
-            entity_id=entity_id,
-            description=description,
-            before_snapshot=json.dumps(before) if before else None,
-            after_snapshot=json.dumps(after) if after else None,
-            ip_address=ip_address,
-            user_agent=user_agent,
-        )
-
-
-    #  Public service methods
-    def login(
+class LoginOperation(_BaseAuthOperation):
+    def execute(
         self,
         data: LoginRequest,
         ip_address: str = "",
         user_agent: str = "",
     ) -> UserResponse:
-        """Authenticate user, evaluate active status, manage MFA challenge,
-        stamp last_login_at, establish session, and write audit log.
-
-        Args:
-            data: Validated login request containing email, password, and
-                optional TOTP code.
-            ip_address: Request originator IP address (for audit + logging).
-            user_agent: HTTP User-Agent string (for audit).
-
-        Returns:
-            UserResponse DTO for the authenticated user (no credentials).
-
-        Raises:
-            InvalidCredentialsError: If email not found or password incorrect.
-            AccountInactiveError: If the account has been deactivated.
-            MFARequiredError: If MFA is enrolled but no TOTP code was provided.
-            MFAInvalidError: If the provided TOTP code is invalid or expired.
-        """
         user = self._users.find_by_email(data.email)
         check_hash = user.password_hash if user else PasswordHasher().hash("_dummy_")
 
@@ -186,14 +98,12 @@ class AuthService:
 
         if password_needs_rehash(user.password_hash):
             user.password_hash = hash_password(data.password)
-            logger.info(
-                "Re-hashed password for user %s (parameter upgrade).", user.id
-            )
+            logger.info("Re-hashed password for user %s (parameter upgrade).", user.id)
 
         user.last_login_at = datetime.now(timezone.utc)
         self._users.save(user)
 
-        self._write_audit(
+        self._audits.log(
             actor_id=str(user.id),
             action=AuditActionType.LOGIN,
             entity_type="user",
@@ -201,6 +111,7 @@ class AuthService:
             description=f"User '{user.email}' logged in.",
             ip_address=ip_address,
             user_agent=user_agent,
+            strict=True,
         )
         self._uow.commit()
 
@@ -221,27 +132,19 @@ class AuthService:
         )
         return UserResponse.from_user(user)
 
-    def logout(
+
+class LogoutOperation(_BaseAuthOperation):
+    def execute(
         self,
         user_id: str,
         ip_address: str = "",
         user_agent: str = "",
     ) -> None:
-        """Log out the current user and write audit event.
-
-        Args:
-            user_id: UUID string of the user to log out.
-            ip_address: Request originator IP (for audit).
-            user_agent: HTTP User-Agent string (for audit).
-
-        Raises:
-            NotFoundError: If no user with the given ID exists.
-        """
         user = self._users.get(user_id)
         if not user:
             raise NotFoundError(resource="User", resource_id=str(user_id))
 
-        self._write_audit(
+        self._audits.log(
             action=AuditActionType.LOGOUT,
             actor_id=str(user.id),
             entity_type="user",
@@ -249,6 +152,7 @@ class AuthService:
             description=f"User '{user.email}' logged out.",
             ip_address=ip_address,
             user_agent=user_agent,
+            strict=True,
         )
         self._uow.commit()
         logout_user()
@@ -256,7 +160,9 @@ class AuthService:
         event_bus.publish(UserLoggedOutEvent(user_id=user.id))
         logger.info("User %s logged out.", user.id)
 
-    def change_password(
+
+class ChangePasswordOperation(_BaseAuthOperation):
+    def execute(
         self,
         user_id: str,
         data: PasswordChangeRequest,
@@ -264,20 +170,6 @@ class AuthService:
         ip_address: str = "",
         user_agent: str = "",
     ) -> None:
-        """Verify current password, enforce uniqueness, hash new, save, audit.
-
-        Args:
-            user_id: UUID string of the user changing their password.
-            data: Validated request with current_password and new_password.
-            actor_id: UUID string of the actor (same as user_id for self-service).
-            ip_address: Request originator IP (for audit).
-            user_agent: HTTP User-Agent string (for audit).
-
-        Raises:
-            NotFoundError: If no user with the given ID exists.
-            InvalidCredentialsError: If current_password does not match.
-            BusinessRuleViolationError: If new password is identical to current.
-        """
         user = self._users.get(user_id)
         if not user:
             raise NotFoundError(resource="User", resource_id=str(user_id))
@@ -292,7 +184,7 @@ class AuthService:
         user.password_hash = hash_password(data.new_password)
         self._users.save(user, actor_id=actor_id)
 
-        self._write_audit(
+        self._audits.log(
             action=AuditActionType.UPDATE,
             actor_id=actor_id,
             entity_type="user",
@@ -302,35 +194,25 @@ class AuthService:
             after={"password_hash": "[REDACTED]"},
             ip_address=ip_address,
             user_agent=user_agent,
+            strict=True,
         )
         self._uow.commit()
 
         event_bus.publish(PasswordChangedEvent(user_id=user.id))
         logger.info("Password changed for user %s.", user.id)
 
-    def request_password_reset(
+
+class RequestPasswordResetOperation(_BaseAuthOperation):
+    def execute(
         self,
         email: str,
         ip_address: str = "",
         user_agent: str = "",
     ) -> ForgotPasswordResponse:
-        """Generate a time-limited HMAC-signed reset token and dispatch event.
-
-        Always returns success to prevent email enumeration — the caller
-        does not learn whether the email is registered.
-
-        Args:
-            email: The email address to send the reset link to.
-            ip_address: Request originator IP (for audit).
-            user_agent: HTTP User-Agent string (for audit).
-
-        Returns:
-            ForgotPasswordResponse with a generic success message.
-        """
         user = self._users.find_by_email(email)
         if user and user.is_active:
             reset_token = create_reset_token(str(user.id))
-            self._write_audit(
+            self._audits.log(
                 action=AuditActionType.UPDATE,
                 actor_id=None,
                 entity_type="user",
@@ -338,6 +220,7 @@ class AuthService:
                 description=f"Password reset requested for '{user.email}'.",
                 ip_address=ip_address,
                 user_agent=user_agent,
+                strict=True,
             )
             self._uow.commit()
 
@@ -356,38 +239,19 @@ class AuthService:
 
         return ForgotPasswordResponse()
 
-    def reset_password(
+
+class ResetPasswordOperation(_BaseAuthOperation):
+    def execute(
         self,
         data: PasswordResetRequest,
         ip_address: str = "",
         user_agent: str = "",
     ) -> None:
-        """Validate HMAC token, enforce single-use via Redis, hash new password.
-
-        Flow
-        ----
-        1. Verify HMAC signature + expiry via `verify_reset_token`.
-        2. Check Redis denylist — reject if already consumed (replay).
-        3. Load user; hash + persist new password.
-        4. Mark token consumed in Redis (atomic SET-NX with TTL).
-        5. Write audit log and dispatch domain event.
-
-        Args:
-            data: Validated request containing token and new_password.
-            ip_address: Request originator IP (for audit).
-            user_agent: HTTP User-Agent string (for audit).
-
-        Raises:
-            PasswordResetTokenInvalidError: If the token is malformed,
-                expired, already used, or the user no longer exists.
-        """
-        # Step 1: verify HMAC signature + expiry
         try:
             user_id = verify_reset_token(data.token)
         except Exception:
             raise PasswordResetTokenInvalidError()
 
-        # Step 2: reject replayed tokens before any DB work
         if self._denylist.is_consumed(data.token):
             logger.warning(
                 "Replayed password reset token for user_id=%s from %s.",
@@ -396,12 +260,10 @@ class AuthService:
             )
             raise PasswordResetTokenInvalidError()
 
-        # Step 3: load user
         user = self._users.get(user_id)
         if not user:
             raise PasswordResetTokenInvalidError()
 
-        # Step 4: persist new password hash
         user.password_hash = hash_password(data.new_password)
         self._users.save(user)
 
@@ -410,14 +272,11 @@ class AuthService:
             ttl_seconds=settings.JWT_RESET_TOKEN_EXPIRES_SECONDS,
         )
         if not consumed:
-            # Race condition: another request consumed this token concurrently
-            logger.warning(
-                "Concurrent reset token use detected for user_id=%s.", user_id
-            )
+            logger.warning("Concurrent reset token use detected for user_id=%s.", user_id)
             self._uow.rollback()
             raise PasswordResetTokenInvalidError()
 
-        self._write_audit(
+        self._audits.log(
             action=AuditActionType.UPDATE,
             actor_id=None,
             entity_type="user",
@@ -426,33 +285,16 @@ class AuthService:
             after={"password_hash": "[REDACTED]"},
             ip_address=ip_address,
             user_agent=user_agent,
+            strict=True,
         )
         self._uow.commit()
 
         event_bus.publish(PasswordResetCompletedEvent(user_id=user.id))
         logger.info("Password reset completed for user %s.", user.id)
 
-    def enroll_mfa(
-        self,
-        user_id: str,
-        actor_id: str,
-    ) -> MFASetupResponse:
-        """Generate a provisional TOTP secret and return the provisioning URI.
 
-        The secret is written as `<secret>:pending` — it is NOT active until
-        `confirm_mfa_enrollment` is called with a valid TOTP code.
-
-        Args:
-            user_id: UUID string of the user starting MFA enrollment.
-            actor_id: UUID string of the actor (same as user for self-service).
-
-        Returns:
-            MFASetupResponse with provisioning_uri and qr_code_data_url.
-
-        Raises:
-            NotFoundError: If no user with the given ID exists.
-            BusinessRuleViolationError: If MFA is already fully enrolled.
-        """
+class EnrollMFAOperation(_BaseAuthOperation):
+    def execute(self, user_id: str, actor_id: str) -> MFASetupResponse:
         user = self._users.get(user_id)
         if not user:
             raise NotFoundError(resource="User", resource_id=str(user_id))
@@ -474,7 +316,9 @@ class AuthService:
             qr_code_data_url=qr_data_url,
         )
 
-    def confirm_mfa_enrollment(
+
+class ConfirmMFAEnrollmentOperation(_BaseAuthOperation):
+    def execute(
         self,
         user_id: str,
         totp_code: str,
@@ -482,20 +326,6 @@ class AuthService:
         ip_address: str = "",
         user_agent: str = "",
     ) -> None:
-        """Verify TOTP code against the provisional secret and activate MFA.
-
-        Args:
-            user_id: UUID string of the user confirming enrollment.
-            totp_code: The 6-digit code from the authenticator app.
-            actor_id: UUID string of the actor (same as user for self-service).
-            ip_address: Request originator IP (for audit).
-            user_agent: HTTP User-Agent string (for audit).
-
-        Raises:
-            NotFoundError: If no user with the given ID exists.
-            MFAInvalidError: If enrollment has not been started, or the
-                TOTP code does not match the provisional secret.
-        """
         user = self._users.get(user_id)
         if not user:
             raise NotFoundError(resource="User", resource_id=str(user_id))
@@ -510,7 +340,7 @@ class AuthService:
         user.mfa_secret = provisional_secret
         self._users.save(user, actor_id=actor_id)
 
-        self._write_audit(
+        self._audits.log(
             action=AuditActionType.UPDATE,
             actor_id=actor_id,
             entity_type="user",
@@ -518,13 +348,16 @@ class AuthService:
             description=f"MFA enrollment confirmed for '{user.email}'.",
             ip_address=ip_address,
             user_agent=user_agent,
+            strict=True,
         )
         self._uow.commit()
 
         event_bus.publish(MFAEnrolledEvent(user_id=user.id))
         logger.info("MFA activated for user %s.", user_id)
 
-    def disable_mfa(
+
+class DisableMFAOperation(_BaseAuthOperation):
+    def execute(
         self,
         user_id: str,
         totp_code: str,
@@ -532,20 +365,6 @@ class AuthService:
         ip_address: str = "",
         user_agent: str = "",
     ) -> None:
-        """Verify TOTP code and permanently clear the MFA secret.
-
-        Args:
-            user_id: UUID string of the user disabling MFA.
-            totp_code: The 6-digit code from the authenticator app.
-            actor_id: UUID string of the actor (same as user for self-service).
-            ip_address: Request originator IP (for audit).
-            user_agent: HTTP User-Agent string (for audit).
-
-        Raises:
-            NotFoundError: If no user with the given ID exists.
-            MFAInvalidError: If MFA is not currently enrolled, or the
-                TOTP code is invalid.
-        """
         user = self._users.get(user_id)
         if not user:
             raise NotFoundError(resource="User", resource_id=str(user_id))
@@ -559,7 +378,7 @@ class AuthService:
         user.mfa_secret = None
         self._users.save(user, actor_id=actor_id)
 
-        self._write_audit(
+        self._audits.log(
             action=AuditActionType.UPDATE,
             actor_id=actor_id,
             entity_type="user",
@@ -567,6 +386,7 @@ class AuthService:
             description=f"MFA disabled for '{user.email}'.",
             ip_address=ip_address,
             user_agent=user_agent,
+            strict=True,
         )
         self._uow.commit()
 

@@ -91,15 +91,15 @@ def user_repo() -> MagicMock:
 
 
 @pytest.fixture()
-def audit_repo() -> MagicMock:
+def audit_service() -> MagicMock:
     return MagicMock()
 
 
 @pytest.fixture()
-def service(user_repo, audit_repo, uow, denylist) -> AuthService:
+def service(user_repo, audit_service, uow, denylist) -> AuthService:
     return AuthService(
         user_repo=user_repo,
-        audit_repo=audit_repo,
+        audit_service=audit_service,
         uow=uow,
         denylist=denylist,
     )
@@ -149,9 +149,9 @@ def _change_pw_req(
 
 # ── Login ─────────────────────────────────────────────────────────────────────
 
-@patch("app.interface.auth.event_bus")
-@patch("app.interface.auth.login_user")
-def test_login_success(mock_login_user, mock_bus, service, user_repo, audit_repo, uow, mock_user):
+@patch("app.interface.auth.services.event_bus")
+@patch("app.interface.auth.services.login_user")
+def test_login_success(mock_login_user, mock_bus, service, user_repo, audit_service, uow, mock_user):
     user_repo.find_by_email.return_value = mock_user
 
     result = service.login(_login_req(), ip_address="1.2.3.4")
@@ -159,13 +159,13 @@ def test_login_success(mock_login_user, mock_bus, service, user_repo, audit_repo
     assert result.email == "admin@thrive.com"
     assert mock_user.last_login_at is not None
     user_repo.save.assert_called_once_with(mock_user)
-    audit_repo.create.assert_called_once()
+    audit_service.log.assert_called_once()
     assert uow.committed == 1
     mock_login_user.assert_called_once()
     mock_bus.publish.assert_called_once()
 
 
-@patch("app.interface.auth.login_user")
+@patch("app.interface.auth.services.login_user")
 def test_login_unknown_email(mock_login, service, user_repo):
     """No user found — must still raise InvalidCredentialsError (not NameError)."""
     user_repo.find_by_email.return_value = None
@@ -176,7 +176,7 @@ def test_login_unknown_email(mock_login, service, user_repo):
     mock_login.assert_not_called()
 
 
-@patch("app.interface.auth.login_user")
+@patch("app.interface.auth.services.login_user")
 def test_login_wrong_password(mock_login, service, user_repo, mock_user):
     user_repo.find_by_email.return_value = mock_user
 
@@ -186,7 +186,7 @@ def test_login_wrong_password(mock_login, service, user_repo, mock_user):
     mock_login.assert_not_called()
 
 
-@patch("app.interface.auth.login_user")
+@patch("app.interface.auth.services.login_user")
 def test_login_inactive_account(mock_login, service, user_repo, mock_user):
     mock_user.is_active = False
     user_repo.find_by_email.return_value = mock_user
@@ -197,7 +197,7 @@ def test_login_inactive_account(mock_login, service, user_repo, mock_user):
     mock_login.assert_not_called()
 
 
-@patch("app.interface.auth.login_user")
+@patch("app.interface.auth.services.login_user")
 def test_login_mfa_required_but_not_provided(mock_login, service, user_repo, mock_user):
     mock_user.mfa_secret = "SOMESECRET"  # active (no :pending suffix)
     user_repo.find_by_email.return_value = mock_user
@@ -208,8 +208,8 @@ def test_login_mfa_required_but_not_provided(mock_login, service, user_repo, moc
     mock_login.assert_not_called()
 
 
-@patch("app.interface.auth.login_user")
-@patch("app.interface.auth.verify_totp", return_value=False)
+@patch("app.interface.auth.services.login_user")
+@patch("app.interface.auth.services.verify_totp", return_value=False)
 def test_login_mfa_invalid_code(mock_verify, mock_login, service, user_repo, mock_user):
     mock_user.mfa_secret = "SOMESECRET"
     user_repo.find_by_email.return_value = mock_user
@@ -220,9 +220,9 @@ def test_login_mfa_invalid_code(mock_verify, mock_login, service, user_repo, moc
     mock_login.assert_not_called()
 
 
-@patch("app.interface.auth.event_bus")
-@patch("app.interface.auth.login_user")
-@patch("app.interface.auth.verify_totp", return_value=True)
+@patch("app.interface.auth.services.event_bus")
+@patch("app.interface.auth.services.login_user")
+@patch("app.interface.auth.services.verify_totp", return_value=True)
 def test_login_mfa_valid_code(mock_verify, mock_login, mock_bus, service, user_repo, mock_user):
     mock_user.mfa_secret = "SOMESECRET"
     user_repo.find_by_email.return_value = mock_user
@@ -234,14 +234,14 @@ def test_login_mfa_valid_code(mock_verify, mock_login, mock_bus, service, user_r
 
 # ── Logout ───────────────────────────────────────────────────────────────────
 
-@patch("app.interface.auth.event_bus")
-@patch("app.interface.auth.logout_user")
-def test_logout_success(mock_logout, mock_bus, service, user_repo, audit_repo, uow, mock_user):
+@patch("app.interface.auth.services.event_bus")
+@patch("app.interface.auth.services.logout_user")
+def test_logout_success(mock_logout, mock_bus, service, user_repo, audit_service, uow, mock_user):
     user_repo.get.return_value = mock_user
 
     service.logout("user-abc-123")
 
-    audit_repo.create.assert_called_once()
+    audit_service.log.assert_called_once()
     assert uow.committed == 1
     mock_logout.assert_called_once()
     mock_bus.publish.assert_called_once()
@@ -256,14 +256,14 @@ def test_logout_user_not_found(service, user_repo):
 
 # ── Change password ───────────────────────────────────────────────────────────
 
-@patch("app.interface.auth.event_bus")
-def test_change_password_success(mock_bus, service, user_repo, audit_repo, uow, mock_user):
+@patch("app.interface.auth.services.event_bus")
+def test_change_password_success(mock_bus, service, user_repo, audit_service, uow, mock_user):
     user_repo.get.return_value = mock_user
 
     service.change_password("user-abc-123", _change_pw_req(), actor_id="user-abc-123")
 
     user_repo.save.assert_called_once()
-    audit_repo.create.assert_called_once()
+    audit_service.log.assert_called_once()
     assert uow.committed == 1
     mock_bus.publish.assert_called_once()
 
@@ -292,8 +292,8 @@ def test_change_password_same_as_current(service, user_repo, mock_user):
 
 # ── Request password reset ────────────────────────────────────────────────────
 
-@patch("app.interface.auth.event_bus")
-@patch("app.interface.auth.create_reset_token", return_value="mock-reset-token")
+@patch("app.interface.auth.services.event_bus")
+@patch("app.interface.auth.services.create_reset_token", return_value="mock-reset-token")
 def test_request_reset_known_email(mock_token, mock_bus, service, user_repo, uow, mock_user):
     user_repo.find_by_email.return_value = mock_user
 
@@ -316,9 +316,9 @@ def test_request_reset_unknown_email(service, user_repo, uow):
 
 # ── Reset password ────────────────────────────────────────────────────────────
 
-@patch("app.interface.auth.event_bus")
-@patch("app.interface.auth.verify_reset_token", return_value="user-abc-123")
-def test_reset_password_success(mock_verify, mock_bus, service, user_repo, audit_repo, uow, mock_user):
+@patch("app.interface.auth.services.event_bus")
+@patch("app.interface.auth.services.verify_reset_token", return_value="user-abc-123")
+def test_reset_password_success(mock_verify, mock_bus, service, user_repo, audit_service, uow, mock_user):
     user_repo.get.return_value = mock_user
     data = PasswordResetRequest.model_validate({
         "token": "valid.token.sig",
@@ -329,12 +329,12 @@ def test_reset_password_success(mock_verify, mock_bus, service, user_repo, audit
     service.reset_password(data)
 
     user_repo.save.assert_called_once()
-    audit_repo.create.assert_called_once()
+    audit_service.log.assert_called_once()
     assert uow.committed == 1
     mock_bus.publish.assert_called_once()
 
 
-@patch("app.interface.auth.verify_reset_token", side_effect=Exception("bad"))
+@patch("app.interface.auth.services.verify_reset_token", side_effect=Exception("bad"))
 def test_reset_password_invalid_token(mock_verify, service):
     data = PasswordResetRequest.model_validate({
         "token": "bad.token",
@@ -346,12 +346,12 @@ def test_reset_password_invalid_token(mock_verify, service):
         service.reset_password(data)
 
 
-@patch("app.interface.auth.verify_reset_token", return_value="user-abc-123")
+@patch("app.interface.auth.services.verify_reset_token", return_value="user-abc-123")
 def test_reset_password_replayed_token(mock_verify, service, user_repo, mock_user):
     """Replayed token (already consumed in denylist) must be rejected."""
     user_repo.get.return_value = mock_user
     # Mark as already consumed
-    service._denylist.consume("replayed.token.sig", ttl_seconds=1800)
+    service._reset_pw_op._denylist.consume("replayed.token.sig", ttl_seconds=1800)
 
     data = PasswordResetRequest.model_validate({
         "token": "replayed.token.sig",
@@ -376,8 +376,8 @@ def test_reset_password_replayed_token(mock_verify, service, user_repo, mock_use
         def is_consumed(self, token: str) -> bool:
             return token in self._used
 
-    service._denylist = _SingleUseDenylist()
-    service._denylist.consume("replayed.token.sig", ttl_seconds=1800)  # pre-consume
+    service._reset_pw_op._denylist = _SingleUseDenylist()
+    service._reset_pw_op._denylist.consume("replayed.token.sig", ttl_seconds=1800)  # pre-consume
 
     with pytest.raises(PasswordResetTokenInvalidError):
         service.reset_password(data)
@@ -385,9 +385,9 @@ def test_reset_password_replayed_token(mock_verify, service, user_repo, mock_use
 
 # ── MFA Enroll ───────────────────────────────────────────────────────────────
 
-@patch("app.interface.auth.generate_totp_qr_data_url", return_value="data:image/png;base64,ABC")
-@patch("app.interface.auth.get_totp_provisioning_uri", return_value="otpauth://totp/test")
-@patch("app.interface.auth.generate_totp_secret", return_value="FAKEBASE32SECRET")
+@patch("app.interface.auth.services.generate_totp_qr_data_url", return_value="data:image/png;base64,ABC")
+@patch("app.interface.auth.services.get_totp_provisioning_uri", return_value="otpauth://totp/test")
+@patch("app.interface.auth.services.generate_totp_secret", return_value="FAKEBASE32SECRET")
 def test_enroll_mfa_success(mock_secret, mock_uri, mock_qr, service, user_repo, uow, mock_user):
     user_repo.get.return_value = mock_user
 
@@ -409,9 +409,9 @@ def test_enroll_mfa_already_enrolled(service, user_repo, mock_user):
 
 # ── MFA Confirm ───────────────────────────────────────────────────────────────
 
-@patch("app.interface.auth.event_bus")
-@patch("app.interface.auth.verify_totp", return_value=True)
-def test_confirm_mfa_success(mock_verify, mock_bus, service, user_repo, audit_repo, uow, mock_user):
+@patch("app.interface.auth.services.event_bus")
+@patch("app.interface.auth.services.verify_totp", return_value=True)
+def test_confirm_mfa_success(mock_verify, mock_bus, service, user_repo, audit_service, uow, mock_user):
     mock_user.mfa_secret = "REALSECRET:pending"
     user_repo.get.return_value = mock_user
 
@@ -425,7 +425,7 @@ def test_confirm_mfa_success(mock_verify, mock_bus, service, user_repo, audit_re
     mock_bus.publish.assert_called_once()
 
 
-@patch("app.interface.auth.verify_totp", return_value=False)
+@patch("app.interface.auth.services.verify_totp", return_value=False)
 def test_confirm_mfa_wrong_code(mock_verify, service, user_repo, mock_user):
     mock_user.mfa_secret = "REALSECRET:pending"
     user_repo.get.return_value = mock_user
@@ -444,9 +444,9 @@ def test_confirm_mfa_not_started(service, user_repo, mock_user):
 
 # ── MFA Disable ───────────────────────────────────────────────────────────────
 
-@patch("app.interface.auth.event_bus")
-@patch("app.interface.auth.verify_totp", return_value=True)
-def test_disable_mfa_success(mock_verify, mock_bus, service, user_repo, audit_repo, uow, mock_user):
+@patch("app.interface.auth.services.event_bus")
+@patch("app.interface.auth.services.verify_totp", return_value=True)
+def test_disable_mfa_success(mock_verify, mock_bus, service, user_repo, audit_service, uow, mock_user):
     mock_user.mfa_secret = "ACTIVE_SECRET"
     user_repo.get.return_value = mock_user
 
@@ -458,7 +458,7 @@ def test_disable_mfa_success(mock_verify, mock_bus, service, user_repo, audit_re
     mock_bus.publish.assert_called_once()
 
 
-@patch("app.interface.auth.verify_totp", return_value=False)
+@patch("app.interface.auth.services.verify_totp", return_value=False)
 def test_disable_mfa_wrong_code(mock_verify, service, user_repo, mock_user):
     mock_user.mfa_secret = "ACTIVE_SECRET"
     user_repo.get.return_value = mock_user
