@@ -28,6 +28,11 @@ from app.core.events.dataclass.referral import(
     ReferralQualifiedEvent
 )
 
+from app.core.events.dataclass.user import(
+    UserCreatedEvent, UserUpdatedEvent, UserDeactivatedEvent,
+    UserReactivatedEvent, UserPreferenceUpdatedEvent
+)
+
 __all__ = [
     "UserLoggedInEvent",
     "UserLoggedOutEvent",
@@ -49,4 +54,9 @@ __all__ = [
     "PaymentReceivedEvent",
     "PaymentRefundedEvent",
     "ReferralQualifiedEvent",
+    "UserCreatedEvent",
+    "UserUpdatedEvent",
+    "UserDeactivatedEvent",
+    "UserReactivatedEvent",
+    "UserPreferenceUpdatedEvent",
 ]
