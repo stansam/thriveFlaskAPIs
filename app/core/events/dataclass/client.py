@@ -12,3 +12,13 @@ class ClientCreatedEvent(DomainEvent):
 class ClientUpdatedEvent(DomainEvent):
     client_id: str = ""
     fields_changed: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ClientDeactivatedEvent(DomainEvent):
+    client_id: str = ""
+
+
+@dataclass
+class ClientPreferenceUpdatedEvent(DomainEvent):
+    client_id: str = ""

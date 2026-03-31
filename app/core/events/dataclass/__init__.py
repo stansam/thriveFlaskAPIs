@@ -9,7 +9,7 @@ from app.core.events.dataclass.booking import(
 )
 
 from app.core.events.dataclass.client import(
-    ClientCreatedEvent, ClientUpdatedEvent
+    ClientCreatedEvent, ClientUpdatedEvent, ClientDeactivatedEvent, ClientPreferenceUpdatedEvent
 )
 
 from app.core.events.dataclass.corporate import(
@@ -48,6 +48,8 @@ __all__ = [
     "BookingCompletedEvent",
     "ClientCreatedEvent",
     "ClientUpdatedEvent",
+    "ClientDeactivatedEvent",
+    "ClientPreferenceUpdatedEvent",
     "SubscriptionRenewedEvent",
     "SubscriptionLimitWarningEvent",
     "PackagePublishedEvent",
