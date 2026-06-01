@@ -10,9 +10,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from app.dto import BookingSummaryResponse, ClientSummaryResponse, TravelPackageSummaryResponse
+from app.enums import PackageStatus
 from app.repository import client_repo, booking_repo, package_repo
 from app.interface._base import BaseService
 from app.core.logging import get_logger
+from app.core.dependencies import get_services
 
 logger = get_logger(__name__)
 
@@ -52,14 +54,12 @@ class SearchService(BaseService):
         booking = booking_repo.find_by_reference(query.upper().strip())
         bookings = []
         if booking:
-            from services.client_service import _booking_summary
-            bookings.append(_booking_summary(booking))
+            bookings.append(get_services().client.get_booking_summary(booking.id))
 
         # Fallback: paginate by reference prefix
         if not bookings:
             booking_page = booking_repo.paginate_bookings(search=query, page=1, per_page=per_group)
-            from services.client_service import _booking_summary
-            bookings = [_booking_summary(b) for b in booking_page.items]
+            bookings = [get_services().client.get_booking_summary(b.id) for b in booking_page.items]
 
         # Packages
         pkg_page = package_repo.paginate_packages(search=query, page=1, per_page=per_group)
@@ -84,7 +84,6 @@ class SearchService(BaseService):
     def autocomplete_package(
         self, query: str, limit: int = 10
     ) -> list[TravelPackageSummaryResponse]:
-        from models.package import PackageStatus
         page = package_repo.paginate_packages(
             status=PackageStatus.ACTIVE, search=query, page=1, per_page=min(limit, 20)
         )

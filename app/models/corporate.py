@@ -1,11 +1,12 @@
 from decimal import Decimal
+from datetime import datetime
 
 from sqlalchemy import (DateTime, 
     Boolean, Enum, ForeignKey, Integer, Numeric, String, Text
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from app.models.base import AuditMixin, db
 
 if TYPE_CHECKING:
@@ -40,6 +41,9 @@ class CorporateAccount(db.Model, AuditMixin):  # type: ignore[name-defined, misc
         back_populates="corporate_account",
         lazy="dynamic",
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(CorporateAccount, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return f"<CorporateAccount {self.company_name}>"
@@ -92,10 +96,10 @@ class CorporateSubscription(db.Model, AuditMixin):  # type: ignore[name-defined,
         default=False,
         doc="Whether 24/7 concierge support is included.",
     )
-    billing_cycle_start: Mapped[DateTime] = mapped_column(
+    billing_cycle_start: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
-    billing_cycle_end: Mapped[DateTime] = mapped_column(
+    billing_cycle_end: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
@@ -111,6 +115,8 @@ class CorporateSubscription(db.Model, AuditMixin):  # type: ignore[name-defined,
             return False
         return self.bookings_used >= self.bookings_limit
 
+    def __init__(self, **kwargs: Any) -> None:
+        super(CorporateSubscription, self).__init__(**kwargs)
+
     def __repr__(self) -> str:
         return f"<CorporateSubscription {self.tier.value} — {self.account_id}>"
-

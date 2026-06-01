@@ -40,8 +40,9 @@ from app.core.errors.handlers import (
     InvalidStatusTransitionError,
     NotFoundError,
 )
+from app.core.dependencies import get_services
 from app.core.events import event_bus
-from app.core.events.dataclasses import (
+from app.core.events.dataclass import (
     BookingCreatedEvent,
     BookingConfirmedEvent,
     BookingCancelledEvent,
@@ -129,9 +130,8 @@ class BookingService(BaseService):
         is_emergency: bool,
     ) -> tuple[Decimal, str | None]:
         """Return (amount, fee_id) from the active schedule."""
-        from services.fee_service import fee_service
         fee = fee_repo.find_active_by_type(fee_type)
-        amount = fee_service.resolve_fee(
+        amount = get_services().fee.resolve_fee(
             fee_type, num_passengers=num_passengers, is_emergency=is_emergency
         )
         return amount, (fee.id if fee else None)
@@ -408,8 +408,7 @@ class BookingService(BaseService):
                 f"Package '{pkg.title}' is not available for booking (status: {pkg.status.value})."
             )
 
-        from services.package_service import package_service
-        total_cost = package_service.resolve_price_for_booking(
+        total_cost = get_services().package.resolve_price_for_booking(
             data.package_id, data.num_participants, data.add_flights
         )
 
@@ -506,8 +505,7 @@ class BookingService(BaseService):
                 client_id=booking.client_id, actor_id=actor_id,
             ))
             # Check referral qualification
-            from services.referral_service import referral_service
-            referral_service.check_and_qualify(booking_id, actor_id)
+            get_services().referral.check_and_qualify(booking_id, actor_id)
         elif new_status == BookingStatus.CANCELLED:
             event_bus.publish(BookingCancelledEvent(
                 booking_id=booking_id, reference_number=booking.reference_number,
@@ -562,10 +560,7 @@ class BookingService(BaseService):
     def update_flight_segment(
         self, segment_id: str, data: dict, actor_id: str
     ) -> FlightSegmentResponse:
-        from repositories.booking_repository import BookingPassengerRepository
-        from models.booking import FlightSegment as FS
-        from sqlalchemy import select
-        seg = db.session.get(FS, segment_id)
+        seg = db.session.get(FlightSegment, segment_id)
         if not seg:
             raise NotFoundError("FlightSegment", segment_id)
         for k, v in data.items():
@@ -577,8 +572,7 @@ class BookingService(BaseService):
         return FlightSegmentResponse.model_validate(seg)
 
     def delete_flight_segment(self, segment_id: str, actor_id: str) -> None:
-        from models.booking import FlightSegment as FS
-        seg = db.session.get(FS, segment_id)
+        seg = db.session.get(FlightSegment, segment_id)
         if not seg:
             raise NotFoundError("FlightSegment", segment_id)
         db.session.delete(seg)
@@ -625,8 +619,7 @@ def _write_fee_snapshot(
     booking_id: str, fee_id: str | None, amount: Decimal,
     num_pax: int, channel: BookingChannel, emergency: bool, actor_id: str
 ) -> None:
-    from services.fee_service import fee_service
-    fee_service.create_snapshot(
+    get_services().fee.create_snapshot(
         booking_id=booking_id, fee_id=fee_id,
         applied_amount=amount, num_passengers=num_pax,
         channel=channel, emergency=emergency, actor_id=actor_id,
@@ -636,8 +629,7 @@ def _write_fee_snapshot(
 def _maybe_increment_corporate(client_id: str, actor_id: str) -> None:
     client = client_repo.get(client_id)
     if client and client.corporate_account_id:
-        from services.corporate_service import corporate_service
-        corporate_service.increment_booking_usage(client.corporate_account_id, actor_id)
+        get_services().corporate.increment_booking_usage(client.corporate_account_id, actor_id)
 
 
 def _to_response(b: Booking):

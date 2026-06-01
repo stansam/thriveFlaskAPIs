@@ -5,7 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import AuditMixin, db
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from app.models.fee import ServiceFee
 
@@ -27,6 +27,9 @@ class ServiceFeeSchedule(db.Model, AuditMixin):  # type: ignore[name-defined, mi
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(ServiceFeeSchedule, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return f"<ServiceFeeSchedule {self.name!r} active={self.is_active}>"

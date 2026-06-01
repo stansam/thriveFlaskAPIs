@@ -1,5 +1,6 @@
 from decimal import Decimal
 from typing import TYPE_CHECKING
+from datetime import datetime
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -42,7 +43,7 @@ class Payment(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
         String(2048), nullable=True,
         doc="CDN URL of uploaded proof of payment screenshot.",
     )
-    paid_at: Mapped[DateTime | None] = mapped_column(
+    paid_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
         doc="Timestamp when admin confirmed receipt.",
     )

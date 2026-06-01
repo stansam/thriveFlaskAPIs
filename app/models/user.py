@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from datetime import datetime
 from sqlalchemy import Boolean, Enum, String, DateTime
@@ -57,6 +57,8 @@ class User(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
         foreign_keys="UserPreference.user_id",
     )
 
-    # Repr
+    def __init__(self, **kwargs: Any) -> None:
+        super(User, self).__init__(**kwargs)
+
     def __repr__(self) -> str:
         return f"<User {self.email} [{self.role.value}]>"

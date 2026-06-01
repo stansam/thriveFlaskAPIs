@@ -17,6 +17,7 @@ from app.models.base import db
 from app.enums import AuditActionType, AssetType, AssetOwnerType, StorageBackend
 from app.core.config import settings
 from app.core.errors.handlers import BadRequestError, ConflictError, BusinessRuleViolationError
+from app.core.logging import get_logger
 from app.dto import (
     MediaAssetResponse,
     MediaAssetUploadRequest,
@@ -112,10 +113,10 @@ class MediaService(BaseService):
         self, itinerary_day_id: str, asset_id: str,
         display_order: int, caption: str | None, actor_id: str
     ) -> PackageMediaResponse:
-        from models.package import PackageItineraryDay
+        from app.models.package import PackageItineraryDay
         day = db.session.get(PackageItineraryDay, itinerary_day_id)
         if not day:
-            from core.errors import NotFoundError
+            from app.core.errors.handlers import NotFoundError
             raise NotFoundError("PackageItineraryDay", itinerary_day_id)
         pm = package_media_repo.create(
             actor_id=actor_id, package_id=day.package_id,

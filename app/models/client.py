@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (Date, 
     Boolean, Enum, ForeignKey, String, Text,
@@ -115,6 +115,9 @@ class Client(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     @property
     def full_name(self) -> str:
         return f"{self.first_name} {self.last_name}"
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(Client, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return f"<Client {self.full_name} [{self.client_type.value}]>"

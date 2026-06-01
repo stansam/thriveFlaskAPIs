@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Enum, ForeignKey, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -43,6 +43,9 @@ class Referral(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
         nullable=True,
         doc="The booking that caused PENDING → QUALIFIED.",
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(Referral, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return (

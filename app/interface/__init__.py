@@ -33,7 +33,10 @@ from app.interface.corporate import CorporateService
 from app.interface.fee import FeeService
 from app.interface.package import PackageService
 from app.interface.audit import audit_service
-
+from app.interface.loyalty import LoyaltyService
+from app.interface.referral import ReferralService
+from app.interface.media import MediaService
+from app.interface.notification import NotificationService
 
 class _ServiceRegistry:
     """
@@ -92,6 +95,12 @@ class _ServiceRegistry:
         audit_service=audit_service,
         uow=SQLAlchemyUnitOfWork(),
     ) # log
+
+    loyalty: LoyaltyService = LoyaltyService() # log
+
+    referral: ReferralService = ReferralService() # log
+    media: MediaService = MediaService()
+    notification: NotificationService = NotificationService()
 
 
 # Exported singleton

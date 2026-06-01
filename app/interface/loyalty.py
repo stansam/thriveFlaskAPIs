@@ -12,10 +12,11 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from app.models.base import db
+from app.models.loyalty import LoyaltyLedger
 from app.enums import AuditActionType, LoyaltyTransactionType
 from app.core.errors.handlers import BadRequestError, NotFoundError
 from app.core.events import event_bus
-from app.core.events.dataclasses import ReferralQualifiedEvent
+from app.core.events.dataclass import ReferralQualifiedEvent
 from app.core.logging import get_logger
 from app.dto import LoyaltyBalanceResponse, LoyaltyLedgerEntryResponse
 from app.repository import client_repo, loyalty_repo, referral_repo, booking_repo
@@ -127,7 +128,6 @@ class LoyaltyService(BaseService):
         from datetime import datetime, timezone
         now = datetime.combine(as_of_date, datetime.min.time(), tzinfo=timezone.utc)
         from sqlalchemy import select, and_
-        from models.loyalty import LoyaltyLedger
         stmt = (
             select(LoyaltyLedger)
             .where(
@@ -155,6 +155,3 @@ class LoyaltyService(BaseService):
             db.session.commit()
             logger.info("Expired %d loyalty credits.", count)
         return count
-
-
-loyalty_service = LoyaltyService()

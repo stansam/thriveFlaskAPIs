@@ -2,6 +2,8 @@ from sqlalchemy import (
      DateTime, Enum, ForeignKey,
     SmallInteger, String,
 )
+from typing import Any
+from datetime import datetime
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.enums import BookingServiceType, CarCategory
@@ -27,10 +29,10 @@ class CarBooking(Booking):
         String(300), nullable=True,
         doc="NULL if same as pickup.",
     )
-    pickup_datetime: Mapped[DateTime] = mapped_column(
+    pickup_datetime: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
-    dropoff_datetime: Mapped[DateTime] = mapped_column(
+    dropoff_datetime: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
     car_category: Mapped[CarCategory] = mapped_column(
@@ -44,6 +46,9 @@ class CarBooking(Booking):
         SmallInteger, nullable=True,
         doc="Driver age; affects rental eligibility and young-driver surcharges.",
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(CarBooking, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return f"<CarBooking {self.reference_number} {self.pickup_location}>"

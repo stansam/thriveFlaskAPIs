@@ -1,9 +1,10 @@
 from sqlalchemy import (DateTime, 
     Enum, ForeignKey, String, Text, SmallInteger
 )
+from datetime import datetime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from app.models.base import AuditMixin, db
 
 if TYPE_CHECKING:
@@ -59,26 +60,26 @@ class NotificationDelivery(db.Model, AuditMixin):  # type: ignore[name-defined, 
         SmallInteger, nullable=False, default=1,
         doc="1-indexed attempt counter.",
     )
-    sent_at: Mapped[DateTime | None] = mapped_column(
+    sent_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
         doc="When the delivery request was dispatched to the provider.",
     )
-    delivered_at: Mapped[DateTime | None] = mapped_column(
+    delivered_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
         doc="Confirmed delivery timestamp (from provider webhook).",
     )
-    opened_at: Mapped[DateTime | None] = mapped_column(
+    opened_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
         doc="Email open / WhatsApp read-receipt timestamp.",
     )
-    failed_at: Mapped[DateTime | None] = mapped_column(
+    failed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
     )
     failure_reason: Mapped[str | None] = mapped_column(
         String(500), nullable=True,
         doc="Human-readable failure description for admin display.",
     )
-    next_retry_at: Mapped[DateTime | None] = mapped_column(
+    next_retry_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
         doc="Scheduled time for the next retry attempt.",
     )
@@ -87,6 +88,9 @@ class NotificationDelivery(db.Model, AuditMixin):  # type: ignore[name-defined, 
     notification: Mapped["Notification"] = relationship(
         "Notification", back_populates="deliveries",
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(NotificationDelivery, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return (

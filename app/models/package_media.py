@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from sqlalchemy import (
     Boolean, ForeignKey, SmallInteger, String
 )
@@ -8,8 +8,8 @@ from app.models.base import AuditMixin, db
 
 if TYPE_CHECKING:
     from app.models.package import TravelPackage
-    from app.models.package_itinerary_days import PackageItineraryDay
-    from app.models.media_asset import MediaAsset
+    from app.models.package_items import PackageItineraryDay
+    from app.models.media import MediaAsset
 
 class PackageMedia(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     __tablename__ = "package_media"
@@ -56,6 +56,9 @@ class PackageMedia(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     itinerary_day: Mapped["PackageItineraryDay | None"] = relationship(
         "PackageItineraryDay", back_populates="media",
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(PackageMedia, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return (

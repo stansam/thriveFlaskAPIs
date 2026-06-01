@@ -10,15 +10,20 @@ from __future__ import annotations
 from decimal import Decimal
 
 from app.models.base import db
-from app.enums import AuditActionType, BookingStatus, PaymentStatus
+from app.enums import(
+    AuditActionType, BookingStatus,
+    PaymentStatus, AssetOwnerType, AssetType
+)
 from app.core.errors.handlers import BadRequestError, NotFoundError
 from app.core.events import event_bus
-from app.core.events.dataclasses import PaymentReceivedEvent, PaymentRefundedEvent
+from app.core.events.dataclass import PaymentReceivedEvent, PaymentRefundedEvent
 from app.core.logging import get_logger
+from app.core.dependencies import get_services
 from app.dto import (
     PaymentConfirmRequest,
     PaymentCreateRequest,
     PaymentResponse,
+    MediaAssetUploadRequest,
     PaymentUpdateRequest,
 )
 from app.repository import payment_repo, booking_repo
@@ -112,7 +117,6 @@ class PaymentService(BaseService):
         booking = booking_repo.get(payment.booking_id)
         if booking and balance <= Decimal("0.00"):
             if booking.status == BookingStatus.PENDING_PAYMENT:
-                from services.booking_service import BookingStatus as BS
                 booking_repo.update(
                     booking, actor_id=actor_id, status=BookingStatus.PAYMENT_RECEIVED
                 )
@@ -208,10 +212,6 @@ class PaymentService(BaseService):
         self, payment_id: str, file, actor_id: str
     ) -> PaymentResponse:
         """Upload proof via MediaService, attach URL to payment."""
-        from services.media_service import media_service
-        from dtos.media_dto import MediaAssetUploadRequest
-        from models.media import AssetType, AssetOwnerType
-
         payment = payment_repo.get_or_404(payment_id)
         meta = MediaAssetUploadRequest(
             asset_type=AssetType.RECEIPT,
@@ -219,7 +219,7 @@ class PaymentService(BaseService):
             owner_id=payment_id,
             is_public=False,
         )
-        asset = media_service.upload_asset(file, meta, actor_id)
+        asset = get_services().media.upload_asset(file, meta, actor_id)
         payment_repo.update(payment, actor_id=actor_id, payment_proof_url=asset.cdn_url)
         db.session.commit()
         return PaymentResponse.model_validate(payment)

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     Boolean, Enum, ForeignKey, SmallInteger, String,
@@ -80,6 +80,9 @@ class UserPreference(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
         "User", back_populates="preference", uselist=False,
         foreign_keys=[user_id],
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(UserPreference, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return f"<UserPreference user={self.user_id} theme={self.theme.value}>"

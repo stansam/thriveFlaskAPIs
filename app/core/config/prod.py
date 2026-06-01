@@ -4,7 +4,7 @@ from pydantic import model_validator
 from pydantic_settings import SettingsConfigDict
 
 class ProductionConfig(BaseConfig):
-    FLASK_ENV: Literal["production"] = "production"
+    FLASK_ENV: str = "production"
     DEBUG: bool = False
     LOG_FORMAT: Literal["text", "json"] = "json"
 

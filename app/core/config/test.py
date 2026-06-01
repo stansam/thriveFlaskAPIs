@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic_settings import SettingsConfigDict
 
 class TestingConfig(BaseConfig):
-    FLASK_ENV: Literal["testing"] = "testing"
+    FLASK_ENV: str = "testing"
     TESTING: bool = True
     DEBUG: bool = True
     DATABASE_URL: str = "sqlite:///:memory:"

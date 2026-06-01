@@ -20,6 +20,7 @@ from app.core.errors.handlers import (
     BadRequestError,
     BusinessRuleViolationError,
     DuplicateSlugError,
+    NotFoundError
 )
 from app.core.events import event_bus
 from app.core.events.dataclass.package import (
@@ -525,7 +526,7 @@ class DeleteInclusionOperation(_PackageOperation):
 
 # ── Itinerary Days ──
 class AddItineraryDayOperation(_PackageOperation):
-    def execute(self, package_id: str, data: PackageInineraryDayCreateRequest, actor_id: str) -> PackageInineraryDayResponse:
+    def execute(self, package_id: str, data: PackageItineraryDayCreateRequest, actor_id: str) -> PackageItineraryDayResponse:
         with self._uow:
             if not self._packages.exists(id=package_id):
                 raise NotFoundError("Package", package_id)
@@ -545,7 +546,7 @@ class AddItineraryDayOperation(_PackageOperation):
 
 
 class UpdateItineraryDayOperation(_PackageOperation):
-    def execute(self, day_id: str, data: PackageInineraryDayUpdateRequest, actor_id: str) -> PackageInineraryDayResponse:
+    def execute(self, day_id: str, data: PackageItineraryDayUpdateRequest, actor_id: str) -> PackageItineraryDayResponse:
         with self._uow:
             day = self._itineraries.get(day_id)
             if not day:

@@ -4,7 +4,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from app.models.base import AuditMixin, db
 
 if TYPE_CHECKING:
@@ -62,6 +62,9 @@ class BookingPassenger(db.Model, AuditMixin):  # type: ignore[name-defined, misc
     @property
     def full_name(self) -> str:
         return f"{self.first_name} {self.last_name}"
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(BookingPassenger, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return f"<BookingPassenger {self.full_name} [booking={self.booking_id}]>"

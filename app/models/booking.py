@@ -1,5 +1,6 @@
 from decimal import Decimal
 from typing import TYPE_CHECKING
+from datetime import datetime
 
 from sqlalchemy import (
     Boolean, DateTime, Enum, 
@@ -99,14 +100,14 @@ class Booking(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     )
 
     # Timestamps beyond AuditMixin
-    confirmed_at: Mapped[DateTime | None] = mapped_column(
+    confirmed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
         doc="When status moved to CONFIRMED.",
     )
-    cancelled_at: Mapped[DateTime | None] = mapped_column(
+    cancelled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
     )
-    completed_at: Mapped[DateTime | None] = mapped_column(
+    completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
     )
 

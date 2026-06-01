@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import AuditMixin, db
 from app.enums import BookingChannel, FeeType
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from app.models.booking import Booking
 
@@ -60,6 +60,9 @@ class ServiceFeeSnapshot(db.Model, AuditMixin):  # type: ignore[name-defined, mi
     )
 
     booking: Mapped["Booking"] = relationship("Booking", back_populates="fee_snapshot")
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(ServiceFeeSnapshot, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return (

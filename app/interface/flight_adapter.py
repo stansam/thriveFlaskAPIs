@@ -282,10 +282,22 @@ class ExternalFlightService(BaseService):
             return None
         try:
             import redis
-            r = redis.from_url(settings.REDIS_URL, db=settings.REDIS_CACHE_DB, decode_responses=True)
+            from redis import Redis
+            r: Redis = redis.from_url(settings.REDIS_URL, db=settings.REDIS_CACHE_DB, decode_responses=True)
+
             val = r.get(key)
-            return json.loads(val) if val else None
-        except Exception:
+            if not isinstance(val, str):
+                logger.debug("Flight cache read failed: %s", val)
+                return None
+
+            data = json.loads(val)
+            if not isinstance(data, list):
+                logger.debug("Flight cache read failed: %s", data)
+                return None
+                
+            return data
+        except Exception as exc:
+            logger.debug("Flight cache read failed: %s", exc)
             return None
 
     def _cache_set(self, key: str, value: list) -> None:

@@ -32,6 +32,7 @@ Design decisions
   without reconstructing the original event payload.
 """
 
+from datetime import datetime
 from sqlalchemy import (DateTime, 
     Enum, ForeignKey, String, Text,
 )
@@ -45,7 +46,7 @@ from app.enums import(
     RecipientType,
 )
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from app.models.notification_template import NotificationTemplate
     from app.models.notification_delivery import NotificationDelivery
@@ -115,14 +116,14 @@ class Notification(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
         nullable=False,
         default=NotificationPriority.NORMAL,
     )
-    read_at: Mapped[DateTime | None] = mapped_column(
+    read_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
         doc="Timestamp when the recipient read/opened the notification.",
     )
-    dismissed_at: Mapped[DateTime | None] = mapped_column(
+    dismissed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
     )
-    scheduled_for: Mapped[DateTime | None] = mapped_column(
+    scheduled_for: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
         doc="Future delivery time for scheduled notifications (e.g. pre-trip reminders).",
     )
@@ -137,6 +138,9 @@ class Notification(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(Notification, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return (

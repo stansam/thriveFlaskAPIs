@@ -2,8 +2,9 @@ from sqlalchemy import (
     Boolean, Date, DateTime, Enum, ForeignKey, Integer,
     SmallInteger, String
 )
+from datetime import datetime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
+from typing import Any
 from app.models.base import AuditMixin, db
 from app.enums import BookingServiceType, FlightCabin
 from app.models.booking import Booking
@@ -52,7 +53,7 @@ class FlightBooking(Booking):
         String(2048), nullable=True,
         doc="Kayak API deeplink to complete the purchase.",
     )
-    ticket_issued_at: Mapped[DateTime | None] = mapped_column(
+    ticket_issued_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
@@ -69,6 +70,9 @@ class FlightBooking(Booking):
         order_by="FlightSegment.segment_order",
         lazy="selectin",
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(FlightBooking, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return (
@@ -105,10 +109,10 @@ class FlightSegment(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
         String(3), nullable=True, doc="2-letter IATA airline code."
     )
     flight_number: Mapped[str | None] = mapped_column(String(10), nullable=True)
-    departure_datetime: Mapped[DateTime | None] = mapped_column(
+    departure_datetime: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    arrival_datetime: Mapped[DateTime | None] = mapped_column(
+    arrival_datetime: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     duration_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -117,6 +121,9 @@ class FlightSegment(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     flight_booking: Mapped["FlightBooking"] = relationship(
         "FlightBooking", back_populates="segments"
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(FlightSegment, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return (

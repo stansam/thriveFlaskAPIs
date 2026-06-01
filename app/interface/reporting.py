@@ -15,19 +15,19 @@ from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Literal
 
-from sqlalchemy import and_, extract, func, select
+from sqlalchemy import func, select
 
 from app.models.base import db
 from app.enums import(
     AuditActionType, BookingStatus,
-    BookingServiceType, PaymentMethod,
+    BookingServiceType, PaymentMethod, PackageStatus,
     PaymentStatus, ReferralStatus, UserRole
 )
 from app.core.logging import get_logger
 from app.models import (
     Booking, Client, ServiceFeeSchedule, 
     TravelPackage, Payment, Referral, 
-    User, CorporateSubscription, PackageBooking
+    User, CorporateSubscription, PackageBooking, CorporateAccount
 )
 from app.repository import audit_repo, booking_repo
 from app.interface._base import BaseService
@@ -136,7 +136,6 @@ class ReportingService(BaseService):
         )
 
         # Active packages
-        from models.package import PackageStatus
         active_pkgs = db.session.execute(
             select(func.count(TravelPackage.id))
             .where(TravelPackage.status == PackageStatus.ACTIVE)
@@ -174,7 +173,20 @@ class ReportingService(BaseService):
         else:
             period_expr = func.strftime("%Y-%m", Booking.created_at)
 
-        rows = db.session.execute(
+        # rows = db.session.execute(
+        #     select(
+        #         period_expr.label("period"),
+        #         func.sum(Booking.total_service_fee_usd).label("total"),
+        #         func.count(Booking.id).label("count"),
+        #     )
+        #     .where(
+        #         Booking.created_at.between(from_dt, to_dt),
+        #         Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.COMPLETED]),
+        #     )
+        #     .group_by(period_expr)
+        #     .order_by(period_expr)
+        # ).all()
+        stmt = (
             select(
                 period_expr.label("period"),
                 func.sum(Booking.total_service_fee_usd).label("total"),
@@ -186,7 +198,9 @@ class ReportingService(BaseService):
             )
             .group_by(period_expr)
             .order_by(period_expr)
-        ).all()
+        )
+
+        rows = db.session.execute(stmt).mappings().all()
         return [
             RevenueDataPoint(period=str(r.period), total_usd=r.total or Decimal("0.00"), booking_count=r.count)
             for r in rows
@@ -244,7 +258,7 @@ class ReportingService(BaseService):
             stmt = stmt.where(Booking.created_at >= datetime.combine(from_date, datetime.min.time(), tzinfo=timezone.utc))
         if to_date:
             stmt = stmt.where(Booking.created_at <= datetime.combine(to_date, datetime.max.time(), tzinfo=timezone.utc))
-        rows = db.session.execute(stmt).all()
+        rows = db.session.execute(stmt).mappings().all()
         return [
             ClientRevenueRow(
                 client_id=r.id,
@@ -282,7 +296,6 @@ class ReportingService(BaseService):
         ]
 
     def corporate_subscription_usage(self) -> list[SubscriptionUsageRow]:
-        from models.client import CorporateAccount
         rows = db.session.execute(
             select(
                 CorporateAccount.id,
@@ -325,10 +338,11 @@ class ReportingService(BaseService):
         self, from_date: date | None = None, to_date: date | None = None
     ) -> ReferralConversionResponse:
         stmt = select(Referral.status, func.count(Referral.id)).group_by(Referral.status)
-        rows = dict(db.session.execute(stmt).all())
-        total = sum(rows.values())
-        qualified = rows.get(ReferralStatus.QUALIFIED, 0) + rows.get(ReferralStatus.CREDITED, 0)
-        credited  = rows.get(ReferralStatus.CREDITED, 0)
+        rows = db.session.execute(stmt).mappings().all()
+        rows_dict = {row["status"]: row["count"] for row in rows}
+        total = sum(rows_dict.values())
+        qualified = rows_dict.get(ReferralStatus.QUALIFIED, 0) + rows_dict.get(ReferralStatus.CREDITED, 0)
+        credited  = rows_dict.get(ReferralStatus.CREDITED, 0)
         conversion = round((qualified / total * 100) if total else 0.0, 1)
         return ReferralConversionResponse(
             total_referrals=total,
@@ -391,7 +405,7 @@ class ReportingService(BaseService):
         return buf.getvalue().encode()
 
     def export_clients_csv(self, filters: dict, actor_id: str) -> bytes:
-        from repositories import client_repo
+        from app.repository import client_repo
         all_clients = client_repo.paginate_clients(
             page=1, per_page=10_000,
             client_type=filters.get("client_type"),

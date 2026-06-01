@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     Boolean, Date, ForeignKey, Numeric,
@@ -70,6 +70,9 @@ class PackageBooking(Booking):
     package: Mapped["TravelPackage"] = relationship(
         "TravelPackage", back_populates="bookings"
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(PackageBooking, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return f"<PackageBooking {self.reference_number} pkg={self.package_id}>"

@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     Enum, ForeignKey, Numeric, SmallInteger, String, Text,
@@ -35,6 +35,9 @@ class PackageHighlight(db.Model, AuditMixin):  # type: ignore[name-defined, misc
     package: Mapped["TravelPackage"] = relationship(
         "TravelPackage", back_populates="highlights"
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(PackageHighlight, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return f"<PackageHighlight {self.text[:40]!r}>"
@@ -79,6 +82,9 @@ class PackageInclusion(db.Model, AuditMixin):  # type: ignore[name-defined, misc
     package: Mapped["TravelPackage"] = relationship(
         "TravelPackage", back_populates="inclusions"
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(PackageInclusion, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return f"<PackageInclusion [{self.inclusion_type.value}] {self.label!r}>"
@@ -147,6 +153,9 @@ class PackageItineraryDay(db.Model, AuditMixin):  # type: ignore[name-defined, m
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(PackageItineraryDay, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return f"<PackageItineraryDay Day {self.day_number}: {self.title!r}>"

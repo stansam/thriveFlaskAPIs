@@ -54,7 +54,7 @@ def _register_cli_commands(app: Flask) -> None:
         """List all registered routes."""
         output = []
         for rule in app.url_map.iter_rules():
-            methods = ",".join(sorted(rule.methods - {"OPTIONS", "HEAD"}))
+            methods = ",".join(sorted((rule.methods or set()) - {"OPTIONS", "HEAD"}))
             output.append(f"{methods:20s}  {str(rule)}")
         for line in sorted(output):
             print(line)

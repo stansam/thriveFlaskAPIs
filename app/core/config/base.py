@@ -20,7 +20,7 @@ class BaseConfig(BaseSettings):
     )
 
     # Application
-    FLASK_ENV: Literal["development", "testing", "production"] = "development"
+    FLASK_ENV: str = "development"
     APP_NAME: str = "Thrive Global Travel & Tours"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
@@ -143,6 +143,12 @@ class BaseConfig(BaseSettings):
     # Background jobs (if Celery is added later)
     CELERY_BROKER_URL: str = "redis://localhost:6379/4"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/5"
+
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
+    AWS_S3_BUCKET: str = ""
+    AWS_S3_REGION: str = "us-east-1"
+    AWS_S3_ENDPOINT_URL: str | None = None    # for MinIO / Backblaze
 
     # Validators
 

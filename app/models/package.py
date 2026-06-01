@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     Boolean, Enum, Numeric, SmallInteger, String, Text,
@@ -140,6 +140,9 @@ class TravelPackage(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
         back_populates="package",
         lazy="dynamic",
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(TravelPackage, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return f"<TravelPackage {self.title!r} [{self.status.value}]>"

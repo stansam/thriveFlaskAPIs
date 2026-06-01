@@ -16,6 +16,7 @@ from app.core.errors.handlers import (
     DuplicateEmailError,
     NotFoundError,
 )
+from datetime import datetime
 from app.core.events import event_bus
 from app.core.events.dataclass.client import (
     ClientCreatedEvent,
@@ -73,7 +74,6 @@ def _booking_summary(b: Any) -> BookingSummaryResponse:
         summary_line=line,
     )
 
-
 class _ClientOperation(BaseService):
     """Base dependencies and helpers for client operations."""
 
@@ -92,6 +92,14 @@ class _ClientOperation(BaseService):
         self._loyalty = loyalty_repo
         self._audits = audit_service
         self._uow = uow
+
+
+class GetBookingSummaryOperation(_ClientOperation):
+    def execute(self, booking_id: str) -> BookingSummaryResponse:
+        booking = self._bookings.get(booking_id)
+        if not booking:
+            raise NotFoundError("Booking", booking_id)
+        return _booking_summary(booking)
 
 
 class GetClientOperation(_ClientOperation):

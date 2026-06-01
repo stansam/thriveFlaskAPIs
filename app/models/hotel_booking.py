@@ -2,7 +2,7 @@ from sqlalchemy import Date, Enum, ForeignKey, SmallInteger, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from app.enums import BookingServiceType, RoomType
 from app.models.booking import Booking
-
+from typing import Any
 class HotelBooking(Booking):
     __tablename__ = "hotel_bookings"
     __mapper_args__ = {"polymorphic_identity": BookingServiceType.HOTEL}
@@ -32,6 +32,9 @@ class HotelBooking(Booking):
         doc="Hotel's own booking confirmation code.",
     )
     special_requests: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(HotelBooking, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return f"<HotelBooking {self.reference_number} {self.hotel_name}>"

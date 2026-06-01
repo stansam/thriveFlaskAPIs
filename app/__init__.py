@@ -119,6 +119,9 @@ def create_app(env: str | None = None, test_config: dict | None = None) -> Flask
         app.config["CACHE_DEFAULT_TIMEOUT"] = 300
         cache.init_app(app)
 
+    with app.app_context():
+        from app.interface import _ServiceRegistry
+        app.extensions['services'] = _ServiceRegistry()
     # ── 7. Register blueprints ──────────────────────────────────────────
     _register_blueprints(app)
 

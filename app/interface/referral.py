@@ -13,12 +13,12 @@ from app.models.base import db
 from app.enums import AuditActionType, ReferralStatus
 from app.core.errors.handlers import BadRequestError, ConflictError, NotFoundError
 from app.core.events import event_bus
-from app.core.events.dataclasses import ReferralQualifiedEvent
+from app.core.events.dataclass import ReferralQualifiedEvent
 from app.dto import ReferralCreateRequest, ReferralResponse
 from app.repository import referral_repo, client_repo, booking_repo
 from app.interface._base import BaseService
 from app.core.logging import get_logger
-
+from app.core.dependencies import get_services
 logger = get_logger(__name__)
 
 
@@ -69,8 +69,7 @@ class ReferralService(BaseService):
 
         referral_repo.qualify(referral, qualifying_booking_id=booking_id, actor_id=actor_id)
 
-        from services.loyalty_service import loyalty_service
-        loyalty_service.credit_referral(referral.id, actor_id=actor_id)
+        get_services().loyalty.credit_referral(referral.id, actor_id=actor_id)
 
         self._audit(
             AuditActionType.UPDATE, actor_id, "referral", referral.id,

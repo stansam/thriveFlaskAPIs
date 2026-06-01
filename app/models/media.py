@@ -8,7 +8,7 @@ DOCUMENT_PDF                       — booking confirmations, e-tickets
 RECEIPT                            — payment proof uploads (admin)
 AVATAR                             — user/client profile photos
 """
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from sqlalchemy import (
     BigInteger, Boolean, Enum, Integer, String,
 )
@@ -18,7 +18,7 @@ from app.models.base import AuditMixin, db
 from app.enums import AssetType, AssetOwnerType, StorageBackend
 
 if TYPE_CHECKING:
-    from app.models.package_itinerary_days import PackageItineraryDay
+    # from app.models.package_items import PackageItineraryDay
     from app.models.package_media import PackageMedia
     
 
@@ -100,6 +100,9 @@ class MediaAsset(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
         back_populates="asset",
         cascade="all, delete-orphan",
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(MediaAsset, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return f"<MediaAsset {self.asset_type.value} {self.original_filename!r}>"

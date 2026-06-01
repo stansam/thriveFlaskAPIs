@@ -58,7 +58,7 @@ class BookingRepository(BaseRepository[Booking]):
         )
         return list(self._session.execute(stmt).scalars().all())
 
-    def find_confirmed_upcoming(self, cutoff_date: date) -> list[Booking]:
+    def find_confirmed_upcoming(self, cutoff_date: date) -> list[FlightBooking | PackageBooking]:
         """
         Return CONFIRMED bookings whose service date is before `cutoff_date`.
         Used by the pre-trip reminder job.  Joins across sub-types for departure dates.

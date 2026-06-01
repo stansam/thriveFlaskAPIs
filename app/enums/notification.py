@@ -81,3 +81,4 @@ class DeliveryStatus(str, Enum):
 class RecipientType(str, Enum):
     USER   = "user"
     CLIENT = "client"
+    ADMIN = "admin"

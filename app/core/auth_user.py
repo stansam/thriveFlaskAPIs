@@ -8,19 +8,19 @@ class FlaskLoginUser(UserMixin):
         self._user = user
 
     def get_id(self) -> str:
-        return str(self._user.id)
+        return self._user.id
 
-    @property
-    def is_active(self) -> bool:
-        return self._user.is_active
+    # @property
+    # def is_active(self) -> bool:
+    #     return self._user.is_active
 
-    @property
-    def is_authenticated(self) -> bool:
-        return True
+    # @property
+    # def is_authenticated(self) -> bool:
+    #     return True
 
-    @property
-    def is_anonymous(self) -> bool:
-        return False
+    # @property
+    # def is_anonymous(self) -> bool:
+    #     return False
 
     @property
     def domain_user(self) -> User:

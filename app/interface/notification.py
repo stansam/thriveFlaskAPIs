@@ -15,22 +15,23 @@ Delivery pipeline per notification:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any
 
 from jinja2 import Environment, TemplateSyntaxError, BaseLoader
 from jinja2.sandbox import SandboxedEnvironment
-
+from sqlalchemy import select, and_
 from app.models.base import db
 from app.enums import (
-    AuditActionType, NotificationDelivery,
+    AuditActionType,
     NotificationEventType, NotificationChannel,
     NotificationPriority, NotificationStatus, DeliveryStatus,
-    RecipientType
+    RecipientType, BookingStatus
 )
-from app.models.notification import (
-    Notification, 
-)
+from app.models.booking import Booking
+from app.models.notification import Notification
+from app.models.notification_template import NotificationTemplate
+from app.models.notification_delivery import NotificationDelivery
 from app.core.logging import get_logger
 from app.core.config import settings
 from app.core.errors.handlers import BadRequestError, NotFoundError, BusinessRuleViolationError
@@ -51,6 +52,7 @@ from app.repository import (
     client_repo,
     client_preference_repo,
     booking_repo,
+    corporate_subscription_repo
 )
 from app.interface._base import BaseService
 
@@ -111,7 +113,7 @@ class NotificationService(BaseService):
             priority=priority,
             scheduled_for=scheduled_for,
         )
-        notif.set_creator(None)
+        notif.set_creator(recipient_id)
         db.session.add(notif)
         db.session.flush()
 
@@ -132,7 +134,7 @@ class NotificationService(BaseService):
                 recipient_address=address,
                 attempt_number=1,
             )
-            delivery.set_creator(None)
+            delivery.set_creator(recipient_id)
             db.session.add(delivery)
             db.session.flush()
             self._attempt_delivery(delivery, sub, rendered)
@@ -216,7 +218,7 @@ class NotificationService(BaseService):
     ) -> NotificationResponse:
         notif = notification_repo.get_or_404(notification_id)
         if notif.recipient_id != recipient_id:
-            from core.errors import PermissionDeniedError
+            from app.core.errors.handlers import PermissionDeniedError
             raise PermissionDeniedError("You do not own this notification.")
         notification_repo.mark_read(notif)
         db.session.commit()
@@ -234,7 +236,7 @@ class NotificationService(BaseService):
     ) -> NotificationResponse:
         notif = notification_repo.get_or_404(notification_id)
         if notif.recipient_id != recipient_id:
-            from core.errors import PermissionDeniedError
+            from app.core.errors.handlers import PermissionDeniedError
             raise PermissionDeniedError("You do not own this notification.")
         notification_repo.update(
             notif,
@@ -363,8 +365,6 @@ class NotificationService(BaseService):
         self, event_type=None, channel=None, is_active=None,
         page: int = 1, per_page: int = 25
     ) -> dict:
-        from sqlalchemy import select
-        from models.notification import NotificationTemplate
         stmt = select(NotificationTemplate)
         if event_type:
             stmt = stmt.where(NotificationTemplate.event_type == event_type)
@@ -409,13 +409,9 @@ class NotificationService(BaseService):
 
     def schedule_balance_reminders(self) -> int:
         """Remind clients with outstanding balances older than 48h."""
-        from datetime import timedelta
-        from models.booking import BookingStatus as BS
         cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
-        from sqlalchemy import select, and_
-        from models.booking import Booking
         stmt = select(Booking).where(
-            Booking.status == BS.PENDING_PAYMENT,
+            Booking.status == BookingStatus.PENDING_PAYMENT,
             Booking.created_at <= cutoff,
         )
         bookings = list(db.session.execute(stmt).scalars().all())
@@ -438,7 +434,6 @@ class NotificationService(BaseService):
         """Warn corporate accounts whose subscription expires within N days."""
         from datetime import timedelta
         cutoff = datetime.now(timezone.utc) + timedelta(days=days_before_expiry)
-        from repositories import corporate_subscription_repo
         subs = corporate_subscription_repo.find_expiring_before(cutoff)
         dispatched = 0
         for sub in subs:

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Enum, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -80,6 +80,9 @@ class AuditLog(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
         back_populates="audit_logs",
         foreign_keys=[actor_id],
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(AuditLog, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return (

@@ -16,6 +16,7 @@ from app.dto import (
     ClientPreferenceResponse,
     ClientPreferenceUpdateRequest,
     LoyaltyBalanceResponse,
+    BookingSummaryResponse,
 )
 from app.repository.client import ClientRepository
 from app.repository.preference import ClientPreferenceRepository
@@ -25,6 +26,7 @@ from app.interface.audit import AuditService
 from app.core.unit_of_work import IUnitOfWork
 
 from app.interface.client.services import (
+    GetBookingSummaryOperation,
     GetClientOperation,
     GetClientByEmailOperation,
     ListClientsOperation,
@@ -80,6 +82,9 @@ class ClientService:
         self._search_op = SearchClientsOperation(
             client_repo, client_preference_repo, booking_repo, loyalty_repo, audit_service, uow
         )
+        self._get_booking_summary_op = GetBookingSummaryOperation(
+            client_repo, client_preference_repo, booking_repo, loyalty_repo, audit_service, uow
+        )
         self._history_op = GetBookingHistoryOperation(
             client_repo, client_preference_repo, booking_repo, loyalty_repo, audit_service, uow
         )
@@ -104,6 +109,9 @@ class ClientService:
 
     def get_client(self, client_id: str) -> ClientResponse:
         return self._get_op.execute(client_id)
+
+    def get_booking_summary(self, booking_id: str) -> BookingSummaryResponse:
+        return self._get_booking_summary_op.execute(booking_id)
 
     def get_client_by_email(self, email: str) -> ClientResponse:
         return self._get_by_email_op.execute(email, self._get_op)

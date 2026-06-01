@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import AuditMixin, db
 from app.enums import FeeType
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from app.models.fee_schedule import ServiceFeeSchedule
 
@@ -53,6 +53,9 @@ class ServiceFee(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     schedule: Mapped["ServiceFeeSchedule"] = relationship(
         "ServiceFeeSchedule", back_populates="fees"
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(ServiceFee, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return f"<ServiceFee {self.fee_type.value} ${self.amount_usd}>"

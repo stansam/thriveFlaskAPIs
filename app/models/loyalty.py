@@ -1,5 +1,6 @@
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+from datetime import datetime
 
 from sqlalchemy import Enum, ForeignKey, Numeric, String, Text, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -49,7 +50,7 @@ class LoyaltyLedger(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
         index=True,
         doc="Referral that generated this credit.",
     )
-    expires_at: Mapped[DateTime | None] = mapped_column(
+    expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
         doc="When this credit expires. NULL = does not expire.",
@@ -60,6 +61,9 @@ class LoyaltyLedger(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
         back_populates="loyalty_entries",
         foreign_keys=[client_id],
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(LoyaltyLedger, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         sign = "+" if self.amount_usd >= 0 else ""

@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     Boolean, ForeignKey, Numeric, SmallInteger, String,
@@ -41,6 +41,9 @@ class PackagePriceTier(db.Model, AuditMixin):  # type: ignore[name-defined, misc
     package: Mapped["TravelPackage"] = relationship(
         "TravelPackage", back_populates="price_tiers"
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(PackagePriceTier, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return f"<PackagePriceTier {self.label} ${self.price_usd}>"

@@ -4,7 +4,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from app.models.base import AuditMixin, db
 
 if TYPE_CHECKING:
@@ -57,6 +57,9 @@ class NotificationTemplate(db.Model, AuditMixin):  # type: ignore[name-defined, 
         back_populates="template",
         lazy="dynamic",
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(NotificationTemplate, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return (
