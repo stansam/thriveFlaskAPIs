@@ -47,6 +47,7 @@ class _ServiceRegistry:
     """
     auth: AuthService = AuthService(
         user_repo=user_repo,
+        user_preference_repo=user_preference_repo,
         audit_service=audit_service,
         uow=SQLAlchemyUnitOfWork(),
         denylist=RedisTokenDenylist(),

@@ -28,9 +28,10 @@ from app.core.security.password_reset import(
 )
 
 from app.core.security.password import(
-    hash_password, verify_password, password_needs_rehash
+    hash_password, verify_password, password_needs_rehash, generate_secure_random_password
 )
 
 from app.core.security.totp import(
-    generate_totp_secret, get_totp_provisioning_uri, verify_totp, generate_totp_qr_data_url
+    generate_totp_secret, get_totp_provisioning_uri, verify_totp, generate_totp_qr_data_url,
+    is_totp_replayed, record_totp_use
 )

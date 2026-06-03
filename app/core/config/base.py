@@ -63,6 +63,13 @@ class BaseConfig(BaseSettings):
     TOTP_DIGITS: int = 6
     TOTP_INTERVAL: int = 30            # seconds
 
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = ""      # e.g., http://localhost:5000/api/v1/auth/google/callback
+    OAUTH_STATE_TTL_SECONDS: int = 300
+    FRONTEND_URL: str = "http://localhost:3000"
+
     # Password policy
     PASSWORD_MIN_LENGTH: int = 10
     PASSWORD_REQUIRE_DIGIT: bool = True

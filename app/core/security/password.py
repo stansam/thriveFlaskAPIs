@@ -3,9 +3,17 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError, VerifyMismatchError
 from app.core.config import settings
 from app.core.logging import get_logger
-
+import secrets
 
 logger = get_logger(__name__)
+
+
+def generate_secure_random_password(length: int = 48) -> str:
+    """
+    Generate a cryptographically secure random password.
+    Suitable for social login (OAuth) signup flows.
+    """
+    return secrets.token_urlsafe(length)
 
 
 _hasher = PasswordHasher(

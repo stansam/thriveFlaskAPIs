@@ -216,3 +216,89 @@ def test_login_account_locked_returns_401(client, test_user, json_headers):
     res_data = resp.get_json()
     assert res_data["error"] == "ACCOUNT_INACTIVE"
     assert "locked" in res_data["message"]
+
+
+# ── Integration Tests: User Self-Registration & Google OAuth ─────────────────
+
+def test_register_agent_success(client, db_session, json_headers):
+    payload = {
+        "full_name": "Self Registered Agent",
+        "email": "selfregistered@thrive.com",
+        "password": "Password123!",
+        "confirm_password": "Password123!",
+        "phone": "+1234567890",
+    }
+    
+    with patch("app.interface.auth.services.event_bus") as mock_bus:
+        resp = client.post(
+            "/api/v1/auth/register",
+            data=json.dumps(payload),
+            headers=json_headers,
+        )
+    assert resp.status_code == HTTPStatus.CREATED
+    res_data = resp.get_json()
+    assert res_data["success"] is True
+    assert res_data["data"]["email"] == "selfregistered@thrive.com"
+    assert res_data["data"]["role"] == "agent"
+
+
+def test_register_agent_duplicate_email(client, db_session, test_user, json_headers):
+    payload = {
+        "full_name": "Self Registered Agent",
+        "email": test_user.email,
+        "password": "Password123!",
+        "confirm_password": "Password123!",
+    }
+    resp = client.post(
+        "/api/v1/auth/register",
+        data=json.dumps(payload),
+        headers=json_headers,
+    )
+    assert resp.status_code == HTTPStatus.CONFLICT
+    res_data = resp.get_json()
+    assert res_data["error"] == "DUPLICATE_EMAIL"
+
+
+def test_register_agent_passwords_mismatch(client, json_headers):
+    payload = {
+        "full_name": "Self Registered Agent",
+        "email": "mismatch@thrive.com",
+        "password": "Password123!",
+        "confirm_password": "PasswordMismatch!",
+    }
+    resp = client.post(
+        "/api/v1/auth/register",
+        data=json.dumps(payload),
+        headers=json_headers,
+    )
+    assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+
+def test_google_login_redirect(client):
+    from app.core.config import settings
+    with patch.object(settings, "GOOGLE_CLIENT_ID", "test-client-id"), \
+         patch.object(settings, "GOOGLE_CLIENT_SECRET", "test-client-secret"), \
+         patch.object(settings, "GOOGLE_REDIRECT_URI", "http://localhost:5000/api/v1/auth/google/callback"), \
+         patch("app.api.v1.auth.routes.routes.get_redis") as mock_redis_func:
+        mock_redis = MagicMock()
+        mock_redis_func.return_value = mock_redis
+        
+        resp = client.get("/api/v1/auth/google")
+        assert resp.status_code == HTTPStatus.FOUND
+        assert "accounts.google.com" in resp.headers["Location"]
+        assert "client_id=test-client-id" in resp.headers["Location"]
+
+
+def test_google_callback_invalid_state(client):
+    with patch("app.api.v1.auth.routes.routes.get_redis") as mock_redis_func:
+        mock_redis = MagicMock()
+        mock_redis.exists.return_value = False
+        mock_redis_func.return_value = mock_redis
+
+        resp = client.get("/api/v1/auth/google/callback?code=foo&state=bar")
+        assert resp.status_code == HTTPStatus.FOUND
+        assert "status=error" in resp.headers["Location"]
+        assert "Invalid+state" in resp.headers["Location"]
+        mock_redis.exists.assert_called_once_with("oauth_state:bar")
+
+

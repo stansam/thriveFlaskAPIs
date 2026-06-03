@@ -8,7 +8,9 @@ from __future__ import annotations
 
 from app.dto import LoginRequest, PasswordChangeRequest, ForgotPasswordResponse, PasswordResetRequest
 from app.dto.user import UserResponse, MFASetupResponse
+from app.dto.auth import UserRegistrationRequest
 from app.repository.user import UserRepository
+from app.repository.preference import UserPreferenceRepository
 from app.interface.audit import AuditService
 from app.core.unit_of_work import IUnitOfWork
 from app.core.token_denylist import ITokenDenylist
@@ -22,6 +24,8 @@ from app.interface.auth.services import (
     EnrollMFAOperation,
     ConfirmMFAEnrollmentOperation,
     DisableMFAOperation,
+    RegisterUserOperation,
+    GoogleOAuthOperation,
 )
 
 
@@ -40,6 +44,7 @@ class AuthService:
     Dependencies (injected via constructor)
     ----------------------------------------
     user_repo     : UserRepository
+    user_preference_repo : UserPreferenceRepository
     audit_service : AuditService    — owns strict audit logging
     uow           : IUnitOfWork     — owns commit/rollback boundary
     denylist      : ITokenDenylist  — single-use reset token enforcement
@@ -48,6 +53,7 @@ class AuthService:
     def __init__(
         self,
         user_repo: UserRepository,
+        user_preference_repo: UserPreferenceRepository,
         audit_service: AuditService,
         uow: IUnitOfWork,
         denylist: ITokenDenylist,
@@ -61,6 +67,8 @@ class AuthService:
         self._enroll_mfa_op = EnrollMFAOperation(user_repo, audit_service, uow, denylist)
         self._confirm_mfa_op = ConfirmMFAEnrollmentOperation(user_repo, audit_service, uow, denylist)
         self._disable_mfa_op = DisableMFAOperation(user_repo, audit_service, uow, denylist)
+        self._register_user_op = RegisterUserOperation(user_repo, user_preference_repo, audit_service, uow)
+        self._google_oauth_op = GoogleOAuthOperation(user_repo, user_preference_repo, audit_service, uow)
 
     def login(
         self,
@@ -130,3 +138,19 @@ class AuthService:
         user_agent: str = "",
     ) -> None:
         self._disable_mfa_op.execute(user_id, totp_code, actor_id, ip_address, user_agent)
+
+    def register_user(
+        self,
+        data: UserRegistrationRequest,
+        ip_address: str = "",
+        user_agent: str = "",
+    ) -> UserResponse:
+        return self._register_user_op.execute(data, ip_address, user_agent)
+
+    def verify_google_oauth(
+        self,
+        profile: dict,
+        ip_address: str = "",
+        user_agent: str = "",
+    ) -> UserResponse:
+        return self._google_oauth_op.execute(profile, ip_address, user_agent)

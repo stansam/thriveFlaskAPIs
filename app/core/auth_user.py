@@ -1,6 +1,5 @@
 from functools import wraps
 import logging
-import redis as redis_lib
 from flask_login import UserMixin, current_user
 
 from app.core.config import settings
@@ -10,6 +9,7 @@ from app.enums import UserRole
 from app.extensions import login_manager
 from app.repository import user_repo
 from app.models.user import User
+from app.core.redis import get_redis
 
 logger = get_logger(__name__)
 
@@ -17,21 +17,10 @@ logger = get_logger(__name__)
 _SESSION_DENYLIST_PREFIX = "deactivated_session:"
 
 
-def _get_redis():
-    """Lazily obtain a Redis connection."""
-    return redis_lib.from_url(
-        settings.REDIS_URL,
-        db=settings.REDIS_DENYLIST_DB,
-        socket_timeout=settings.REDIS_SOCKET_TIMEOUT,
-        socket_connect_timeout=settings.REDIS_SOCKET_CONNECT_TIMEOUT,
-        decode_responses=True,
-    )
-
-
 def deactivate_user_session(user_id: str) -> None:
     """Mark the user's active sessions as deactivated in Redis."""
     try:
-        r = _get_redis()
+        r = get_redis()
         r.set(f"{_SESSION_DENYLIST_PREFIX}{user_id}", "1", ex=2592000)
     except Exception as exc:
         logger.error(
@@ -44,7 +33,7 @@ def deactivate_user_session(user_id: str) -> None:
 def reactivate_user_session(user_id: str) -> None:
     """Remove user's deactivated session status from Redis."""
     try:
-        r = _get_redis()
+        r = get_redis()
         r.delete(f"{_SESSION_DENYLIST_PREFIX}{user_id}")
     except Exception as exc:
         logger.error(
@@ -57,7 +46,7 @@ def reactivate_user_session(user_id: str) -> None:
 def is_user_session_deactivated(user_id: str) -> bool:
     """Check if the user's sessions have been deactivated."""
     try:
-        r = _get_redis()
+        r = get_redis()
         return r.exists(f"{_SESSION_DENYLIST_PREFIX}{user_id}") == 1
     except Exception as exc:
         logger.error(

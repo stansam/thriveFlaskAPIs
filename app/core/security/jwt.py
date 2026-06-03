@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Any
 import logging
 from app.core.config import settings
+from app.core.redis import get_redis
 from app.core.errors.handlers import (
     PasswordResetTokenInvalidError,
     TokenExpiredError,
@@ -122,19 +123,7 @@ def _utcnow_ts() -> int:
 #     if auth_header.startswith("Bearer "):
 #         return auth_header[7:].strip()
 #     return None
-# token denylist
-def _get_redis():
-    """Lazy Redis client for the denylist DB."""
-    import redis as redis_lib
-    return redis_lib.from_url(
-        settings.REDIS_URL,
-        db=settings.REDIS_DENYLIST_DB,
-        socket_timeout=settings.REDIS_SOCKET_TIMEOUT,
-        socket_connect_timeout=settings.REDIS_SOCKET_CONNECT_TIMEOUT,
-        decode_responses=True,
-    )
-
-
+# token denylist using shared get_redis
 # def revoke_token(token: str, expires_in_seconds: int | None = None) -> None:
 #     """
 #     Add a token to the Redis denylist.
@@ -144,7 +133,7 @@ def _get_redis():
 #     jti = _token_jti(token)
 #     ttl = expires_in_seconds or settings.JWT_ACCESS_TOKEN_EXPIRES_SECONDS
 #     try:
-#         _get_redis().setex(f"denylist:{jti}", ttl, "1")
+#         get_redis().setex(f"denylist:{jti}", ttl, "1")
 #     except Exception as exc:
 #         # Log and continue — a Redis failure should not block logout
 #         logger.error("Failed to add token to denylist: %s", exc)
@@ -153,9 +142,10 @@ def _get_redis():
 # def _is_token_revoked(jti: str) -> bool:
 #     """Return True if the JTI is found in the Redis denylist."""
 #     try:
-#         return _get_redis().exists(f"denylist:{jti}") == 1
+#         return get_redis().exists(f"denylist:{jti}") == 1
 #     except Exception as exc:
 #         logger.error("Redis denylist check failed: %s", exc)
 #         return False  # fail open — don't break auth on Redis outage
+
 
 

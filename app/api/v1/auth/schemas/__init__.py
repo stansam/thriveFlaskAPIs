@@ -51,3 +51,15 @@ class MFADisableSchema(Schema):
         unknown = RAISE
 
     totp_code = fields.Str(required=True, validate=validate.Regexp(r'^\d{6}$'))
+
+
+class RegisterUserSchema(Schema):
+    class Meta:
+        unknown = RAISE
+
+    full_name = fields.Str(required=True, validate=validate.Length(min=2, max=200))
+    email = fields.Email(required=True)
+    password = fields.Str(required=True, validate=validate.Length(min=10, max=128))
+    confirm_password = fields.Str(required=True, validate=validate.Length(min=10, max=128))
+    phone = fields.Str(load_default=None, validate=validate.Length(max=30))
+

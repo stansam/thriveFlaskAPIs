@@ -11,6 +11,9 @@ from app.api.v1.auth.routes.routes import (
     MFAEnrollView,
     MFAConfirmView,
     MFADisableView,
+    RegisterView,
+    GoogleLoginView,
+    GoogleCallbackView,
 )
 from app.api.v1.utils import RouteConfig
 
@@ -54,5 +57,20 @@ AUTH_ROUTES: list[RouteConfig] = [
         "url_rule": "/mfa/disable",
         "view_func": MFADisableView.as_view("auth_mfa_disable"),
         "methods": ["POST"],
+    },
+    {
+        "url_rule": "/register",
+        "view_func": RegisterView.as_view("auth_register"),
+        "methods": ["POST"],
+    },
+    {
+        "url_rule": "/google",
+        "view_func": GoogleLoginView.as_view("auth_google_login"),
+        "methods": ["GET"],
+    },
+    {
+        "url_rule": "/google/callback",
+        "view_func": GoogleCallbackView.as_view("auth_google_callback"),
+        "methods": ["GET"],
     },
 ]

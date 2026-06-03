@@ -30,6 +30,7 @@ from app.dto.user import (
     PasswordChangeRequest, PasswordResetRequest, LoginRequest,
     MFASetupResponse, ForgotPasswordResponse, UserListResult
 )
+from app.dto.auth import UserRegistrationRequest
 from app.dto.client import (
     ClientCreateRequest, ClientUpdateRequest, ClientResponse, ClientSummaryResponse
 )

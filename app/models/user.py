@@ -47,6 +47,13 @@ class User(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     locked_until: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, default=None
     )
+    google_id: Mapped[str | None] = mapped_column(
+        String(255),
+        unique=True,
+        nullable=True,
+        index=True,
+        doc="Google OAuth unique subject ID (sub claim).",
+    )
 
     # Relationships
     audit_logs: Mapped[list["AuditLog"]] = relationship(

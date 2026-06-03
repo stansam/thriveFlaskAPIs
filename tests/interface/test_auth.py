@@ -12,11 +12,29 @@ or database connection is required.
 from __future__ import annotations
 
 import sys
+import pytest
 import importlib.metadata
 from datetime import datetime
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch, PropertyMock
 
-# ── Stub out C-extension / network deps before any app import ─────────────────
+from app.core.token_denylist import NullTokenDenylist
+from app.core.unit_of_work import IUnitOfWork
+from app.core.errors.handlers import (
+    InvalidCredentialsError,
+    AccountInactiveError,
+    MFARequiredError,
+    MFAInvalidError,
+    NotFoundError,
+    BusinessRuleViolationError,
+    PasswordResetTokenInvalidError,
+    DuplicateEmailError,
+)
+from app.core.security import hash_password, generate_totp_secret
+from app.dto import LoginRequest, PasswordChangeRequest, PasswordResetRequest, UserRegistrationRequest
+from app.enums import UserRole
+from app.interface.auth import AuthService
+
+
 for _mod in ("bcrypt", "qrcode", "email_validator"):
     sys.modules.setdefault(_mod, MagicMock())
 
@@ -30,29 +48,6 @@ def _mock_version(name: str) -> str:
 
 
 importlib.metadata.version = _mock_version  # type: ignore[assignment]
-# ─────────────────────────────────────────────────────────────────────────────
-
-import pytest
-from unittest.mock import MagicMock, patch
-
-from app.core.token_denylist import NullTokenDenylist
-from app.core.unit_of_work import IUnitOfWork
-from app.core.errors.handlers import (
-    InvalidCredentialsError,
-    AccountInactiveError,
-    MFARequiredError,
-    MFAInvalidError,
-    NotFoundError,
-    BusinessRuleViolationError,
-    PasswordResetTokenInvalidError,
-)
-from app.core.security import hash_password, generate_totp_secret
-from app.dto import LoginRequest, PasswordChangeRequest, PasswordResetRequest
-from app.enums import UserRole
-from app.interface.auth import AuthService
-
-
-# ── Fixtures ─────────────────────────────────────────────────────────────────
 
 class _FakeUoW(IUnitOfWork):
     """In-memory Unit of Work for testing."""
@@ -96,9 +91,15 @@ def audit_service() -> MagicMock:
 
 
 @pytest.fixture()
-def service(user_repo, audit_service, uow, denylist) -> AuthService:
+def user_preference_repo() -> MagicMock:
+    return MagicMock()
+
+
+@pytest.fixture()
+def service(user_repo, user_preference_repo, audit_service, uow, denylist) -> AuthService:
     return AuthService(
         user_repo=user_repo,
+        user_preference_repo=user_preference_repo,
         audit_service=audit_service,
         uow=uow,
         denylist=denylist,
@@ -532,3 +533,236 @@ def test_login_clears_counter_on_success(mock_login_user, mock_bus, service, use
 
     assert mock_user.failed_login_count == 0
     assert mock_user.locked_until is None
+
+@patch("app.interface.auth.services.login_user")
+@patch("app.interface.auth.services.event_bus")
+def test_register_user_success(mock_bus, mock_login, service, user_repo, user_preference_repo, audit_service):
+    user_repo.exists.return_value = False
+    
+    mock_user = MagicMock()
+    mock_user.id = "user-123"
+    mock_user.email = "newagent@thrive.com"
+    mock_user.full_name = "New Agent"
+    mock_user.phone = "+1234567890"
+    mock_user.role = UserRole.AGENT
+    mock_user.is_active = True
+    mock_user.mfa_is_enrolled = False
+    mock_user.last_login_at = None
+    mock_user.to_audit_dict.return_value = {
+        "id": "user-123",
+        "created_at": "2024-01-01T00:00:00Z",
+        "updated_at": "2024-01-01T00:00:00Z",
+        "created_by_id": None,
+        "updated_by_id": None,
+    }
+    user_repo.create.return_value = mock_user
+
+    data = UserRegistrationRequest(
+        full_name="New Agent",
+        email="newagent@thrive.com",
+        password="Password123!",
+        confirm_password="Password123!",
+        phone="+1234567890",
+    )
+
+    response = service.register_user(data, ip_address="127.0.0.1", user_agent="Mozilla")
+
+    assert response.email == "newagent@thrive.com"
+    assert response.role == UserRole.AGENT
+    user_repo.exists.assert_called_once_with(email="newagent@thrive.com")
+    user_repo.create.assert_called_once()
+    mock_user.set_creator.assert_called_once_with("user-123")
+    user_preference_repo.get_or_create.assert_called_once_with(user_id="user-123", actor_id="user-123")
+    audit_service.log.assert_called_once()
+    mock_login.assert_called_once()
+    mock_bus.publish.assert_called_once()
+
+
+def test_register_user_duplicate_email(service, user_repo):
+    user_repo.exists.return_value = True
+
+    data = UserRegistrationRequest(
+        full_name="New Agent",
+        email="existingagent@thrive.com",
+        password="Password123!",
+        confirm_password="Password123!",
+    )
+
+    with pytest.raises(DuplicateEmailError):
+        service.register_user(data)
+
+    user_repo.exists.assert_called_once_with(email="existingagent@thrive.com")
+    user_repo.create.assert_not_called()
+
+
+@patch("app.interface.auth.services.login_user")
+def test_google_oauth_existing_google_id(mock_login, service, user_repo, audit_service):
+    mock_user = MagicMock()
+    mock_user.id = "user-123"
+    mock_user.email = "oauthagent@thrive.com"
+    mock_user.full_name = "OAuth Agent"
+    mock_user.phone = None
+    mock_user.role = UserRole.AGENT
+    mock_user.is_active = True
+    mock_user.is_locked = False
+    mock_user.mfa_is_enrolled = False
+    mock_user.last_login_at = None
+    mock_user.to_audit_dict.return_value = {
+        "id": "user-123",
+        "created_at": "2024-01-01T00:00:00Z",
+        "updated_at": "2024-01-01T00:00:00Z",
+        "created_by_id": None,
+        "updated_by_id": None,
+    }
+    
+    user_repo.get_by.return_value = mock_user
+
+    profile = {"sub": "google-sub-123", "email": "oauthagent@thrive.com", "name": "OAuth Agent"}
+
+    response = service.verify_google_oauth(profile, ip_address="127.0.0.1", user_agent="Mozilla")
+
+    assert response.email == "oauthagent@thrive.com"
+    user_repo.get_by.assert_called_once_with(google_id="google-sub-123")
+    user_repo.find_by_email.assert_not_called()
+    user_repo.save.assert_called_once_with(mock_user)
+    mock_login.assert_called_once()
+
+
+@patch("app.interface.auth.services.login_user")
+def test_google_oauth_link_by_email(mock_login, service, user_repo, audit_service):
+    user_repo.get_by.return_value = None
+    
+    mock_user = MagicMock()
+    mock_user.id = "user-123"
+    mock_user.email = "linkagent@thrive.com"
+    mock_user.full_name = "Link Agent"
+    mock_user.phone = None
+    mock_user.role = UserRole.AGENT
+    mock_user.is_active = True
+    mock_user.is_locked = False
+    mock_user.google_id = None
+    mock_user.mfa_is_enrolled = False
+    mock_user.last_login_at = None
+    mock_user.to_audit_dict.return_value = {
+        "id": "user-123",
+        "created_at": "2024-01-01T00:00:00Z",
+        "updated_at": "2024-01-01T00:00:00Z",
+        "created_by_id": None,
+        "updated_by_id": None,
+    }
+    
+    user_repo.find_by_email.return_value = mock_user
+
+    profile = {"sub": "google-sub-123", "email": "linkagent@thrive.com", "name": "Link Agent"}
+
+    response = service.verify_google_oauth(profile, ip_address="127.0.0.1", user_agent="Mozilla")
+
+    assert response.email == "linkagent@thrive.com"
+    assert mock_user.google_id == "google-sub-123"
+    user_repo.get_by.assert_called_once_with(google_id="google-sub-123")
+    user_repo.find_by_email.assert_called_once_with("linkagent@thrive.com")
+    assert user_repo.save.call_count == 2
+    mock_login.assert_called_once()
+
+
+@patch("app.interface.auth.services.login_user")
+@patch("app.interface.auth.services.event_bus")
+def test_google_oauth_register_new_user(mock_bus, mock_login, service, user_repo, user_preference_repo, audit_service):
+    user_repo.get_by.return_value = None
+    user_repo.find_by_email.return_value = None
+
+    mock_user = MagicMock()
+    mock_user.id = "user-123"
+    mock_user.email = "newoauth@thrive.com"
+    mock_user.full_name = "New OAuth"
+    mock_user.phone = None
+    mock_user.role = UserRole.AGENT
+    mock_user.is_active = True
+    mock_user.is_locked = False
+    mock_user.google_id = "google-sub-123"
+    mock_user.mfa_is_enrolled = False
+    mock_user.last_login_at = None
+    mock_user.to_audit_dict.return_value = {
+        "id": "user-123",
+        "created_at": "2024-01-01T00:00:00Z",
+        "updated_at": "2024-01-01T00:00:00Z",
+        "created_by_id": None,
+        "updated_by_id": None,
+    }
+    
+    user_repo.create.return_value = mock_user
+
+    profile = {"sub": "google-sub-123", "email": "newoauth@thrive.com", "name": "New OAuth"}
+
+    response = service.verify_google_oauth(profile, ip_address="127.0.0.1", user_agent="Mozilla")
+
+    assert response.email == "newoauth@thrive.com"
+    user_repo.create.assert_called_once()
+    mock_user.set_creator.assert_called_once_with("user-123")
+    user_preference_repo.get_or_create.assert_called_once_with(user_id="user-123", actor_id="user-123")
+    mock_login.assert_called_once()
+    mock_bus.publish.assert_called_once()
+
+
+def test_google_oauth_inactive_blocked(service, user_repo):
+    mock_user = MagicMock()
+    mock_user.id = "user-123"
+    mock_user.is_active = False
+    mock_user.is_locked = False
+    
+    user_repo.get_by.return_value = mock_user
+
+    profile = {"sub": "google-sub-123", "email": "inactive@thrive.com"}
+
+    with pytest.raises(AccountInactiveError):
+        service.verify_google_oauth(profile)
+
+@patch("app.interface.auth.services.is_totp_replayed")
+@patch("app.interface.auth.services.verify_totp")
+def test_login_mfa_replay_rejected(mock_verify, mock_replayed, service, user_repo, mock_user):
+    user_repo.find_by_email.return_value = mock_user
+    mock_user.mfa_secret = "secret"
+    mock_user.is_active = True
+    mock_user.is_locked = False
+    
+    mock_replayed.return_value = True
+
+    with pytest.raises(MFAInvalidError):
+        service.login(_login_req(totp_code="123456"))
+
+    mock_replayed.assert_called_once_with(str(mock_user.id), "123456")
+    mock_verify.assert_not_called()
+
+
+@patch("app.interface.auth.services.is_totp_replayed")
+@patch("app.interface.auth.services.verify_totp")
+@patch("app.interface.auth.services.record_totp_use")
+@patch("app.interface.auth.services.login_user")
+def test_login_mfa_records_use_on_success(mock_login, mock_record, mock_verify, mock_replayed, service, user_repo, mock_user):
+    user_repo.find_by_email.return_value = mock_user
+    mock_user.mfa_secret = "secret"
+    mock_user.is_active = True
+    mock_user.is_locked = False
+    
+    mock_replayed.return_value = False
+    mock_verify.return_value = True
+
+    service.login(_login_req(totp_code="123456"))
+
+    mock_replayed.assert_called_once_with(str(mock_user.id), "123456")
+    mock_verify.assert_called_once_with("secret", "123456")
+    mock_record.assert_called_once_with(str(mock_user.id), "123456")
+
+
+@patch("app.interface.auth.services.login_user")
+def test_login_mfa_null_secret_rejected(mock_login, service, user_repo, mock_user):
+    user_repo.find_by_email.return_value = mock_user
+    mock_user.mfa_secret = None
+    type(mock_user).mfa_is_enrolled = PropertyMock(return_value=True)
+    mock_user.is_active = True
+    mock_user.is_locked = False
+
+    with pytest.raises(MFAInvalidError):
+        service.login(_login_req(totp_code="123456"))
+
+
