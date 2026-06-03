@@ -40,6 +40,7 @@ import logging
 import traceback
 from http import HTTPStatus
 
+from flask_limiter.errors import RateLimitExceeded
 from flask import Flask, jsonify, request
 from marshmallow import ValidationError as MarshmallowValidationError
 from pydantic import ValidationError
@@ -150,6 +151,26 @@ def register_error_handlers(app: Flask) -> None:
             payload["request_id"] = request_id
         response = jsonify(payload)
         response.status_code = HTTPStatus.UNPROCESSABLE_ENTITY
+        return response
+
+    # 2.75 Rate limiting (Flask-Limiter RateLimitExceeded)
+    @app.errorhandler(RateLimitExceeded)
+    def handle_rate_limit(exc: RateLimitExceeded):
+        request_id = _get_request_id()
+        logger.warning(
+            "Rate limit exceeded: %s %s — limit=%s",
+            request.method,
+            request.path,
+            str(exc.description),
+        )
+        payload = {
+            "error":   "RATE_LIMIT_EXCEEDED",
+            "message": "Too many requests. Please try again later.",
+        }
+        if request_id:
+            payload["request_id"] = request_id
+        response = jsonify(payload)
+        response.status_code = HTTPStatus.TOO_MANY_REQUESTS
         return response
 
     # 3. Werkzeug HTTP exceptions (Flask routing — 404, 405, etc.)

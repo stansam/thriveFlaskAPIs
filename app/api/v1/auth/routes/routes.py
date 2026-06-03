@@ -7,6 +7,8 @@ from __future__ import annotations
 from flask import request
 from flask.views import MethodView
 from flask_login import login_required, current_user
+from app.extensions import limiter
+from app.core.config import settings
 
 from app.core.dependencies import get_services
 from app.core.utils import get_user_ip, get_user_agent
@@ -32,6 +34,9 @@ from app.api.v1.auth.schemas import (
 
 class LoginView(MethodView):
     """POST /api/v1/auth/login"""
+    decorators = [
+        limiter.limit(f"{settings.RATE_LIMIT_LOGIN_PER_MINUTE}/minute"),
+    ]
 
     def post(self) -> tuple:
         json_data = request.get_json()
@@ -71,7 +76,10 @@ class LogoutView(MethodView):
 
 class ChangePasswordView(MethodView):
     """POST /api/v1/auth/change-password"""
-    decorators = [login_required]
+    decorators = [
+        limiter.limit("20/minute"),
+        login_required,
+    ]
 
     def post(self) -> tuple:
         json_data = request.get_json()
@@ -95,6 +103,9 @@ class ChangePasswordView(MethodView):
 
 class ForgotPasswordView(MethodView):
     """POST /api/v1/auth/forgot-password"""
+    decorators = [
+        limiter.limit(f"{settings.RATE_LIMIT_RESET_PER_HOUR}/hour"),
+    ]
 
     def post(self) -> tuple:
         json_data = request.get_json()
@@ -118,6 +129,9 @@ class ForgotPasswordView(MethodView):
 
 class ResetPasswordView(MethodView):
     """POST /api/v1/auth/reset-password"""
+    decorators = [
+        limiter.limit("10/minute"),
+    ]
 
     def post(self) -> tuple:
         json_data = request.get_json()

@@ -181,3 +181,19 @@ def test_mfa_enroll_endpoint_success(client, test_user, json_headers):
     assert res_data["success"] is True
     assert "provisioning_uri" in res_data["data"]
     assert "qr_code_data_url" in res_data["data"]
+
+
+def test_rate_limit_exceeded_error_handling(client, json_headers):
+    from flask_limiter.errors import RateLimitExceeded
+    limit_mock = MagicMock()
+    limit_mock.error_message = "10 per 1 minute"
+    with patch("app.api.v1.auth.routes.routes.LoginView.post", side_effect=RateLimitExceeded(limit_mock)):
+        resp = client.post(
+            "/api/v1/auth/login",
+            data=json.dumps({"email": "test@thrive.com", "password": "wrong"}),
+            headers=json_headers,
+        )
+        assert resp.status_code == HTTPStatus.TOO_MANY_REQUESTS
+        res_data = resp.get_json()
+        assert res_data["error"] == "RATE_LIMIT_EXCEEDED"
+        assert res_data["message"] == "Too many requests. Please try again later."

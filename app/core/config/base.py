@@ -71,7 +71,7 @@ class BaseConfig(BaseSettings):
 
     # Rate limiting (per IP unless noted)
     RATE_LIMIT_LOGIN_PER_MINUTE: int = 10
-    RATE_LIMIT_RESET_PER_HOUR: int = 5
+    RATE_LIMIT_RESET_PER_HOUR: int = 3
     RATE_LIMIT_API_PER_MINUTE: int = 300
     RATELIMIT_STORAGE_URI: str = "redis://localhost:6379/3"
 
@@ -202,4 +202,5 @@ class BaseConfig(BaseSettings):
             "SQLALCHEMY_ENGINE_OPTIONS": self.sqlalchemy_engine_options,
             "SQLALCHEMY_TRACK_MODIFICATIONS": False,
             "RATELIMIT_STORAGE_URI": self.RATELIMIT_STORAGE_URI,
+            "RATELIMIT_DEFAULT": f"{self.RATE_LIMIT_API_PER_MINUTE}/minute",
         }
