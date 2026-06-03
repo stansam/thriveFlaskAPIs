@@ -1,20 +1,28 @@
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
-    Boolean, Enum, ForeignKey, SmallInteger, String,
+    Boolean, Enum, ForeignKey, SmallInteger, String, CheckConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import AuditMixin, db
-from app.enums import(
+from app.enums import (
     ThemePreference,
     DashboardLayout,
+    PreferredChannel,
 )
 if TYPE_CHECKING:
     from app.models.user import User
 
 class UserPreference(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     __tablename__ = "user_preferences"
+
+    __table_args__ = (
+        CheckConstraint(
+            "items_per_page >= 5 AND items_per_page <= 200",
+            name="ck_user_pref_items_per_page",
+        ),
+    )
 
     user_id: Mapped[str] = mapped_column(
         String(36),
@@ -49,8 +57,10 @@ class UserPreference(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     )
 
     # Workflow defaults
-    default_booking_channel: Mapped[str] = mapped_column(
-        String(30), nullable=False, default="whatsapp",
+    default_booking_channel: Mapped[PreferredChannel] = mapped_column(
+        Enum(PreferredChannel, name="booking_channel_enum"),
+        nullable=False,
+        default=PreferredChannel.WHATSAPP,
         doc="Pre-filled channel when creating a new booking.",
     )
     show_ticket_cost_column: Mapped[bool] = mapped_column(

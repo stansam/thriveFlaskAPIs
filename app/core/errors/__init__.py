@@ -41,6 +41,7 @@ import traceback
 from http import HTTPStatus
 
 from flask import Flask, jsonify, request
+from marshmallow import ValidationError as MarshmallowValidationError
 from pydantic import ValidationError
 from werkzeug.exceptions import HTTPException
 from app.core.errors.handlers.base import AppError
@@ -104,6 +105,45 @@ def register_error_handlers(app: Flask) -> None:
         payload = {
             "error":      "VALIDATION_ERROR",
             "message":    "Request body failed validation.",
+            "details":    details,
+        }
+        if request_id:
+            payload["request_id"] = request_id
+        response = jsonify(payload)
+        response.status_code = HTTPStatus.UNPROCESSABLE_ENTITY
+        return response
+
+    # 2.5 Marshmallow ValidationError (API layer validation)
+    @app.errorhandler(MarshmallowValidationError)
+    def handle_marshmallow_validation_error(exc: MarshmallowValidationError):
+        request_id = _get_request_id()
+        details = []
+        for field, messages in exc.messages.items():
+            field_name = str(field)
+            if isinstance(messages, list):
+                for m in messages:
+                    details.append({
+                        "field":   field_name,
+                        "message": str(m),
+                        "type":    "invalid_value",
+                    })
+            elif isinstance(messages, dict):
+                for subfield, submsg in messages.items():
+                    details.append({
+                        "field":   f"{field_name}.{subfield}",
+                        "message": str(submsg),
+                        "type":    "invalid_value",
+                    })
+            else:
+                details.append({
+                    "field":   field_name,
+                    "message": str(messages),
+                    "type":    "invalid_value",
+                })
+        logger.warning("Marshmallow ValidationError: %d errors", len(details))
+        payload = {
+            "error":      "VALIDATION_ERROR",
+            "message":    "Request payload failed validation.",
             "details":    details,
         }
         if request_id:

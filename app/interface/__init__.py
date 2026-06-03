@@ -103,23 +103,6 @@ class _ServiceRegistry:
     notification: NotificationService = NotificationService()
 
 
-# Exported singleton
-registry = _ServiceRegistry()
-
-# Aliases
-auth_service = registry.auth
-user_service = registry.user
-client_service = registry.client
-corporate_service = registry.corporate
-fee_service = registry.fee
-package_service = registry.package
-
 __all__ = [
-    "registry",
-    "auth_service",
-    "user_service",
-    "client_service",
-    "corporate_service",
-    "fee_service",
-    "package_service",
+    "_ServiceRegistry",
 ]

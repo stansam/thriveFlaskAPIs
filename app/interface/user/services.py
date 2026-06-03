@@ -11,6 +11,7 @@ from typing import Any
 import logging
 
 from app.interface._base import BaseService
+from app.dto import UserResponse
 from app.enums import AuditActionType, UserRole
 from app.core.errors.handlers import (
     BadRequestError,
@@ -28,22 +29,72 @@ from app.core.events.dataclass import (
 )
 from app.dto import (
     UserCreateRequest,
-    UserResponse,
     UserUpdateRequest,
     UserPreferenceResponse,
     UserPreferenceUpdateRequest,
+    UserListResult,
 )
 from app.repository.user import UserRepository
 from app.repository.preference import UserPreferenceRepository
 from app.interface.audit import AuditService
 from app.core.unit_of_work import IUnitOfWork
 from app.core.logging import get_logger
-from app.repository.base import Page
 
-logger: logging.Logger = get_logger(__name__)
-class _UserOperation(BaseService):
-    """Base dependencies and helpers for user operations."""
+logger = get_logger(__name__)
 
+class GetUserOperation:
+    def __init__(self, user_repo: UserRepository) -> None:
+        self._users = user_repo
+
+    def execute(self, user_id: str) -> UserResponse:
+        user = self._users.get(user_id)
+        if not user:
+            raise NotFoundError("User", user_id)
+        return UserResponse.from_user(user)
+
+
+class GetUserByEmailOperation:
+    def __init__(self, user_repo: UserRepository) -> None:
+        self._users = user_repo
+
+    def execute(self, email: str) -> UserResponse:
+        user = self._users.find_by_email(email.lower().strip())
+        if not user:
+            raise NotFoundError("User", email)
+        return UserResponse.from_user(user)
+
+
+class ListUsersOperation:
+    def __init__(self, user_repo: UserRepository) -> None:
+        self._users = user_repo
+
+    def execute(
+        self,
+        role: UserRole | None = None,
+        is_active: bool | None = None,
+        search: str | None = None,
+        page: int = 1,
+        per_page: int = 25,
+    ) -> UserListResult:
+        result = self._users.paginate_users(
+            role=role,
+            is_active=is_active,
+            search=search,
+            page=page,
+            per_page=per_page,
+        )
+        return UserListResult(
+            items=[UserResponse.from_user(u) for u in result.items],
+            total=result.total,
+            page=result.page,
+            per_page=result.per_page,
+            total_pages=result.total_pages,
+            has_next=result.has_next,
+            has_prev=result.has_prev,
+        )
+
+
+class CreateUserOperation(BaseService):
     def __init__(
         self,
         user_repo: UserRepository,
@@ -56,83 +107,61 @@ class _UserOperation(BaseService):
         self._audits = audit_service
         self._uow = uow
 
-
-
-class GetUserOperation(_UserOperation):
-    def execute(self, user_id: str) -> UserResponse:
-        user = self._users.get(user_id)
-        if not user:
-            raise NotFoundError("User", user_id)
-        return UserResponse.from_user(user)
-
-
-class GetUserByEmailOperation(_UserOperation):
-    def execute(self, email: str) -> UserResponse:
-        user = self._users.find_by_email(email.lower().strip())
-        if not user:
-            raise NotFoundError("User", email)
-        return UserResponse.from_user(user)
-
-
-class ListUsersOperation(_UserOperation):
-    def execute(
-        self,
-        role: UserRole | None = None,
-        is_active: bool | None = None,
-        search: str | None = None,
-        page: int = 1,
-        per_page: int = 25,
-    ) -> dict:
-        result = self._users.paginate_users(
-            role=role,
-            is_active=is_active,
-            search=search,
-            page=page,
-            per_page=per_page,
-        )
-        return {
-            "items": [UserResponse.from_user(u) for u in result.items],
-            **self._page_meta(result),
-        }
-
-
-class CreateUserOperation(_UserOperation):
     def execute(self, data: UserCreateRequest, actor_id: str) -> UserResponse:
         email = data.email.lower().strip()
         if self._users.exists(email=email):
             raise DuplicateEmailError(email)
 
-        user = self._users.create(
-            actor_id=actor_id,
-            email=email,
-            full_name=data.full_name,
-            phone=data.phone,
-            password_hash=hash_password(data.password),
-            role=data.role,
-            is_active=True,
+        with self._uow:
+            user = self._users.create(
+                actor_id=actor_id,
+                email=email,
+                full_name=data.full_name,
+                phone=data.phone,
+                password_hash=hash_password(data.password),
+                role=data.role,
+                is_active=True,
+            )
+
+            # Initialise preference row with defaults
+            self._user_prefs.get_or_create(user_id=user.id, actor_id=actor_id)
+
+            self._audits.log(
+                action=AuditActionType.CREATE,
+                actor_id=actor_id,
+                entity_type="user",
+                entity_id=user.id,
+                description=f"User '{email}' created with role '{data.role.value}'.",
+                after=self._snapshot(user, ["id", "email", "full_name", "role", "is_active"]),
+                strict=True,
+            )
+            self._uow.commit()
+
+        event_bus.publish(
+            UserCreatedEvent(
+                user_id=user.id,
+                email=email,
+                role=data.role.value,
+                full_name=data.full_name,
+                actor_id=actor_id,
+            )
         )
-
-        # Initialise preference row with defaults
-        self._user_prefs.get_or_create(user_id=user.id, actor_id=actor_id)
-
-        self._audits.log(
-            action=AuditActionType.CREATE,
-            actor_id=actor_id,
-            entity_type="user",
-            entity_id=user.id,
-            description=f"User '{email}' created with role '{data.role.value}'.",
-            after=self._snapshot(user, ["id", "email", "full_name", "role", "is_active"]),
-            strict=True,
-        )
-        self._uow.commit()
-
-        event_bus.publish(UserCreatedEvent(user_id=user.id, email=email, role=data.role.value))
         logger.info("User created: %s (id=%s) by actor=%s", email, user.id, actor_id)
         
         return UserResponse.from_user(user)
 
 
-class UpdateUserOperation(_UserOperation):
+class UpdateUserOperation(BaseService):
+    def __init__(
+        self,
+        user_repo: UserRepository,
+        audit_service: AuditService,
+        uow: IUnitOfWork,
+    ) -> None:
+        self._users = user_repo
+        self._audits = audit_service
+        self._uow = uow
+
     def execute(
         self,
         user_id: str,
@@ -144,29 +173,46 @@ class UpdateUserOperation(_UserOperation):
             raise NotFoundError("User", user_id)
             
         before = self._snapshot(user, ["full_name", "phone", "role", "is_active"])
-
         updates = data.model_dump(exclude_none=True)
-        if updates:
-            self._users.update(user, actor_id=actor_id, **updates)
 
-        self._audits.log(
-            action=AuditActionType.UPDATE,
-            actor_id=actor_id,
-            entity_type="user",
-            entity_id=user.id,
-            description=f"User '{user.email}' updated: {list(updates.keys())}.",
-            before=before,
-            after=self._snapshot(user, ["full_name", "phone", "role", "is_active"]),
-            strict=True,
+        with self._uow:
+            if updates:
+                self._users.update(user, actor_id=actor_id, **updates)
+
+            self._audits.log(
+                action=AuditActionType.UPDATE,
+                actor_id=actor_id,
+                entity_type="user",
+                entity_id=user.id,
+                description=f"User '{user.email}' updated: {list(updates.keys())}.",
+                before=before,
+                after=self._snapshot(user, ["full_name", "phone", "role", "is_active"]),
+                strict=True,
+            )
+            self._uow.commit()
+
+        event_bus.publish(
+            UserUpdatedEvent(
+                user_id=user.id,
+                changed_fields=list(updates.keys()),
+                actor_id=actor_id,
+            )
         )
-        self._uow.commit()
-
-        event_bus.publish(UserUpdatedEvent(user_id=user.id))
         logger.info("User updated: %s (id=%s) fields=%s by actor=%s", user.email, user.id, list(updates.keys()), actor_id)
         return UserResponse.from_user(user)
 
 
-class DeactivateUserOperation(_UserOperation):
+class DeactivateUserOperation(BaseService):
+    def __init__(
+        self,
+        user_repo: UserRepository,
+        audit_service: AuditService,
+        uow: IUnitOfWork,
+    ) -> None:
+        self._users = user_repo
+        self._audits = audit_service
+        self._uow = uow
+
     def execute(self, user_id: str, actor_id: str) -> UserResponse:
         user = self._users.get(user_id)
         if not user:
@@ -181,62 +227,105 @@ class DeactivateUserOperation(_UserOperation):
                 )
 
         before = self._snapshot(user, ["is_active"])
-        self._users.update(user, actor_id=actor_id, is_active=False)
 
-        self._audits.log(
-            action=AuditActionType.UPDATE,
-            actor_id=actor_id,
-            entity_type="user",
-            entity_id=user.id,
-            description=f"User '{user.email}' deactivated.",
-            before=before,
-            after={"is_active": False},
-            strict=True,
-        )
-        self._uow.commit()
+        with self._uow:
+            self._users.update(user, actor_id=actor_id, is_active=False)
 
-        event_bus.publish(UserDeactivatedEvent(user_id=user.id))
+            self._audits.log(
+                action=AuditActionType.UPDATE,
+                actor_id=actor_id,
+                entity_type="user",
+                entity_id=user.id,
+                description=f"User '{user.email}' deactivated.",
+                before=before,
+                after={"is_active": False},
+                strict=True,
+            )
+            self._uow.commit()
+
+        event_bus.publish(UserDeactivatedEvent(user_id=user.id, actor_id=actor_id))
         logger.info("User deactivated: %s (id=%s) by actor=%s", user.email, user.id, actor_id)
         return UserResponse.from_user(user)
 
 
-class ReactivateUserOperation(_UserOperation):
+class ReactivateUserOperation(BaseService):
+    def __init__(
+        self,
+        user_repo: UserRepository,
+        audit_service: AuditService,
+        uow: IUnitOfWork,
+    ) -> None:
+        self._users = user_repo
+        self._audits = audit_service
+        self._uow = uow
+
     def execute(self, user_id: str, actor_id: str) -> UserResponse:
         user = self._users.get(user_id)
         if not user:
             raise NotFoundError("User", user_id)
+
+        if user.is_active:
+            logger.info(
+                "Reactivate no-op: user %s (id=%s) is already active.",
+                user.email,
+                user_id,
+            )
+            return UserResponse.from_user(user)
             
         before = self._snapshot(user, ["is_active"])
-        self._users.update(user, actor_id=actor_id, is_active=True)
 
-        self._audits.log(
-            action=AuditActionType.UPDATE,
-            actor_id=actor_id,
-            entity_type="user",
-            entity_id=user.id,
-            description=f"User '{user.email}' reactivated.",
-            before=before,
-            after={"is_active": True},
-            strict=True,
-        )
-        self._uow.commit()
+        with self._uow:
+            self._users.update(user, actor_id=actor_id, is_active=True)
 
-        event_bus.publish(UserReactivatedEvent(user_id=user.id))
+            self._audits.log(
+                action=AuditActionType.UPDATE,
+                actor_id=actor_id,
+                entity_type="user",
+                entity_id=user.id,
+                description=f"User '{user.email}' reactivated.",
+                before=before,
+                after={"is_active": True},
+                strict=True,
+            )
+            self._uow.commit()
+
+        event_bus.publish(UserReactivatedEvent(user_id=user.id, actor_id=actor_id))
         logger.info("User reactivated: %s (id=%s) by actor=%s", user.email, user.id, actor_id)
         return UserResponse.from_user(user)
 
 
-class GetUserPreferenceOperation(_UserOperation):
+class GetUserPreferenceOperation:
+    def __init__(
+        self,
+        user_repo: UserRepository,
+        user_preference_repo: UserPreferenceRepository,
+    ) -> None:
+        self._users = user_repo
+        self._user_prefs = user_preference_repo
+
     def execute(self, user_id: str) -> UserPreferenceResponse:
         if not self._users.exists(id=user_id):
             raise NotFoundError("User", user_id)
             
-        pref = self._user_prefs.get_or_create(user_id=user_id)
-        self._uow.commit()   # commit the lazy-create if it happened
+        pref = self._user_prefs.find_by_user(user_id)
+        if pref is None:
+            raise NotFoundError("UserPreference", user_id)
         return UserPreferenceResponse.model_validate(pref)
 
 
-class UpdateUserPreferenceOperation(_UserOperation):
+class UpdateUserPreferenceOperation(BaseService):
+    def __init__(
+        self,
+        user_repo: UserRepository,
+        user_preference_repo: UserPreferenceRepository,
+        audit_service: AuditService,
+        uow: IUnitOfWork,
+    ) -> None:
+        self._users = user_repo
+        self._user_prefs = user_preference_repo
+        self._audits = audit_service
+        self._uow = uow
+
     def execute(
         self,
         user_id: str,
@@ -247,13 +336,30 @@ class UpdateUserPreferenceOperation(_UserOperation):
             raise NotFoundError("User", user_id)
             
         pref = self._user_prefs.get_or_create(user_id=user_id, actor_id=actor_id)
+        before = self._snapshot(pref, list(data.__class__.model_fields.keys()))
 
         updates = data.model_dump(exclude_none=True)
-        if updates:
-            self._user_prefs.update(pref, actor_id=actor_id, **updates)
+        with self._uow:
+            if updates:
+                self._user_prefs.update(pref, actor_id=actor_id, **updates)
+                self._audits.log(
+                    action=AuditActionType.UPDATE,
+                    actor_id=actor_id,
+                    entity_type="user_preference",
+                    entity_id=pref.id,
+                    description=f"Preferences updated for user '{user_id}': {list(updates.keys())}.",
+                    before=before,
+                    after=self._snapshot(pref, list(updates.keys())),
+                    strict=True,
+                )
+            self._uow.commit()
 
-        self._uow.commit()
-
-        event_bus.publish(UserPreferenceUpdatedEvent(user_id=user_id))
+        event_bus.publish(
+            UserPreferenceUpdatedEvent(
+                user_id=user_id,
+                changed_fields=list(updates.keys()),
+                actor_id=actor_id,
+            )
+        )
         logger.info("User preferences updated: user_id=%s by actor=%s", user_id, actor_id)
         return UserPreferenceResponse.model_validate(pref)

@@ -88,6 +88,12 @@ def service(user_repo, user_preference_repo, audit_service, uow) -> UserService:
 @pytest.fixture()
 def mock_user() -> MagicMock:
     user = MagicMock()
+    type(user).mfa_is_enrolled = property(
+        lambda self: bool(self.mfa_secret and not str(self.mfa_secret).endswith(":pending"))
+    )
+    type(user).mfa_is_pending = property(
+        lambda self: bool(self.mfa_secret and str(self.mfa_secret).endswith(":pending"))
+    )
     user.id = "user-abc-123"
     user.email = "test@thrive.com"
     user.full_name = "Test User"
@@ -115,13 +121,13 @@ def mock_pref() -> MagicMock:
     pref = MagicMock()
     pref.id = "pref-123"
     pref.user_id = "user-abc-123"
-    from app.enums import ThemePreference, DashboardLayout
+    from app.enums import ThemePreference, DashboardLayout, PreferredChannel
     pref.theme = ThemePreference.SYSTEM
     pref.timezone = "UTC"
     pref.language = "en"
     pref.dashboard_layout = DashboardLayout.OVERVIEW
     pref.items_per_page = 25
-    pref.default_booking_channel = "web"
+    pref.default_booking_channel = PreferredChannel.WHATSAPP
     pref.show_ticket_cost_column = True
     pref.auto_send_confirmation = True
     pref.notify_new_booking = True
@@ -189,10 +195,10 @@ def test_list_users(service, user_repo, mock_user):
 
     result = service.list_users(role=UserRole.AGENT, page=1, per_page=25)
 
-    assert len(result["items"]) == 1
-    assert result["items"][0].id == "user-abc-123"
-    assert result["total"] == 1
-    assert result["has_next"] is False
+    assert len(result.items) == 1
+    assert result.items[0].id == "user-abc-123"
+    assert result.total == 1
+    assert result.has_next is False
     user_repo.paginate_users.assert_called_once_with(
         role=UserRole.AGENT,
         is_active=None,
@@ -213,7 +219,7 @@ def test_create_user_success(mock_hash, mock_bus, service, user_repo, user_prefe
     req = UserCreateRequest.model_validate({
         "email": "NEW@Thrive.com",
         "full_name": "New User",
-        "phone": "0799999999",
+        "phone": "+254799999999",
         "password": "Password1!",
         "role": UserRole.AGENT.value,
     })
@@ -226,7 +232,7 @@ def test_create_user_success(mock_hash, mock_bus, service, user_repo, user_prefe
         actor_id="admin-123",
         email="new@thrive.com",
         full_name="New User",
-        phone="0799999999",
+        phone="+254799999999",
         password_hash="HASHED",
         role=UserRole.AGENT,
         is_active=True,
@@ -244,7 +250,7 @@ def test_create_user_duplicate_email(service, user_repo):
     req = UserCreateRequest.model_validate({
         "email": "existing@thrive.com",
         "full_name": "Existing User",
-        "phone": "0799999999",
+        "phone": "+254799999999",
         "password": "Password1!",
         "role": UserRole.AGENT.value,
     })
@@ -313,14 +319,14 @@ def test_reactivate_user_success(mock_bus, service, user_repo, audit_service, uo
 # ── Tests: Preferences ─────────────────────────────────────────────────────────
 
 def test_get_preference_success(service, user_repo, user_preference_repo, uow, mock_user, mock_pref):
-    user_repo.get.return_value = mock_user
-    user_preference_repo.get_or_create.return_value = mock_pref
+    user_repo.exists.return_value = True
+    user_preference_repo.find_by_user.return_value = mock_pref
 
     result = service.get_preference("user-abc-123")
 
     assert result.language == "en"
-    user_preference_repo.get_or_create.assert_called_once_with(user_id="user-abc-123")
-    assert uow.committed == 1
+    user_preference_repo.find_by_user.assert_called_once_with("user-abc-123")
+    assert uow.committed == 0
 
 
 @patch("app.interface.user.services.event_bus")
@@ -338,3 +344,28 @@ def test_update_preference_success(mock_bus, service, user_repo, user_preference
     assert uow.committed == 1
     mock_bus.publish.assert_called_once()
     assert isinstance(mock_bus.publish.call_args[0][0], UserPreferenceUpdatedEvent)
+
+
+def test_user_phone_validation():
+    # Test valid phone formats
+    for phone in ["+1234567890", "+254 (799) 999-999", "+44-799-999-999"]:
+        req = UserCreateRequest.model_validate({
+            "email": "NEW@Thrive.com",
+            "full_name": "New User",
+            "phone": phone,
+            "password": "Password1!",
+            "role": UserRole.AGENT.value,
+        })
+        assert req.phone == phone
+
+    # Test invalid phone formats
+    from pydantic import ValidationError
+    for phone in ["0799999999", "1234567890", "+12345", "+1234567890123456"]:
+        with pytest.raises(ValidationError):
+            UserCreateRequest.model_validate({
+                "email": "NEW@Thrive.com",
+                "full_name": "New User",
+                "phone": phone,
+                "password": "Password1!",
+                "role": UserRole.AGENT.value,
+            })

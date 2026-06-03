@@ -47,7 +47,8 @@ class User(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
         "AuditLog",
         back_populates="actor",
         foreign_keys="AuditLog.actor_id",
-        lazy="dynamic",
+        lazy="write_only",
+        passive_deletes=True,
     )
     preference: Mapped["UserPreference | None"] = relationship(
         "UserPreference",
@@ -56,6 +57,14 @@ class User(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
         cascade="all, delete-orphan",
         foreign_keys="UserPreference.user_id",
     )
+
+    @property
+    def mfa_is_enrolled(self) -> bool:
+        return bool(self.mfa_secret and not self.mfa_secret.endswith(":pending"))
+
+    @property
+    def mfa_is_pending(self) -> bool:
+        return bool(self.mfa_secret and self.mfa_secret.endswith(":pending"))
 
     def __init__(self, **kwargs: Any) -> None:
         super(User, self).__init__(**kwargs)

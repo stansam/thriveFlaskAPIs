@@ -108,6 +108,12 @@ def service(user_repo, audit_service, uow, denylist) -> AuthService:
 @pytest.fixture()
 def mock_user() -> MagicMock:
     user = MagicMock()
+    type(user).mfa_is_enrolled = property(
+        lambda self: bool(self.mfa_secret and not str(self.mfa_secret).endswith(":pending"))
+    )
+    type(user).mfa_is_pending = property(
+        lambda self: bool(self.mfa_secret and str(self.mfa_secret).endswith(":pending"))
+    )
     user.id = "user-abc-123"
     user.email = "admin@thrive.com"
     user.password_hash = hash_password("ValidPassword1!")

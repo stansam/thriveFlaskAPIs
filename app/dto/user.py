@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Annotated
+from dataclasses import dataclass
 
 from pydantic import EmailStr, Field, field_validator, model_validator
 
@@ -42,6 +43,23 @@ class UserCreateRequest(StrictRequestModel):
             raise ValueError("Password must contain at least one uppercase letter.")
         return v
 
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = v.strip()
+        if not v:
+            return None
+        clean_v = v.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+        import re
+        if not re.match(r"^\+[1-9]\d{6,14}$", clean_v):
+            raise ValueError(
+                "Phone number must be in international format (e.g., +1234567890) "
+                "with a '+' followed by 7 to 15 digits."
+            )
+        return v
+
 class UserUpdateRequest(StrictRequestModel):
     """PATCH /admin/users/{id} — partial update."""
 
@@ -49,6 +67,23 @@ class UserUpdateRequest(StrictRequestModel):
     phone: Annotated[str | None, Field(default=None, max_length=30)]
     role: UserRole | None = None
     is_active: bool | None = None
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = v.strip()
+        if not v:
+            return None
+        clean_v = v.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+        import re
+        if not re.match(r"^\+[1-9]\d{6,14}$", clean_v):
+            raise ValueError(
+                "Phone number must be in international format (e.g., +1234567890) "
+                "with a '+' followed by 7 to 15 digits."
+            )
+        return v
 
 class PasswordChangeRequest(StrictRequestModel):
     """POST /auth/change-password"""
@@ -79,7 +114,16 @@ class LoginRequest(StrictRequestModel):
     """POST /auth/login"""
     email: EmailStr
     password: str
-    totp_code: Annotated[str | None, Field(default=None, max_length=6)] = None
+    totp_code: Annotated[
+        str | None,
+        Field(
+            default=None,
+            min_length=6,
+            max_length=6,
+            pattern=r"^\d{6}$",
+            description="6-digit TOTP code. Required when MFA is enrolled.",
+        ),
+    ] = None
 
     @field_validator("email")
     @classmethod
@@ -106,7 +150,7 @@ class UserResponse(AuditFieldsMixin):
             "phone": user.phone,
             "role": user.role,
             "is_active": user.is_active,
-            "mfa_enrolled": user.mfa_secret is not None,
+            "mfa_enrolled": user.mfa_is_enrolled,
             "last_login_at": user.last_login_at,
         })
 
@@ -124,3 +168,13 @@ class MFASetupResponse(ResponseModel):
 
 class ForgotPasswordResponse(ResponseModel):
     message: str = "If that email is registered, a reset link has been sent."
+
+@dataclass(frozen=True)
+class UserListResult:
+    items: list[UserResponse]
+    total: int
+    page: int
+    per_page: int
+    total_pages: int
+    has_next: bool
+    has_prev: bool

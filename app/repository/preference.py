@@ -1,5 +1,6 @@
 from app.models import UserPreference, ClientPreference
 from sqlalchemy import select as _pselect
+from sqlalchemy.exc import IntegrityError
 from app.repository.base import BaseRepository
 
 from app.core.logging import get_logger
@@ -15,9 +16,17 @@ class UserPreferenceRepository(BaseRepository[UserPreference]):
 
     def get_or_create(self, user_id: str, actor_id: str | None = None) -> UserPreference:
         pref = self.find_by_user(user_id)
-        if pref is None:
+        if pref is not None:
+            return pref
+        try:
             pref = self.create(actor_id=actor_id, user_id=user_id)
-        return pref
+            return pref
+        except IntegrityError:
+            self._session.rollback()
+            pref = self.find_by_user(user_id)
+            if pref is None:
+                raise
+            return pref
 
 
 class ClientPreferenceRepository(BaseRepository[ClientPreference]):
@@ -28,9 +37,17 @@ class ClientPreferenceRepository(BaseRepository[ClientPreference]):
 
     def get_or_create(self, client_id: str, actor_id: str | None = None) -> ClientPreference:
         pref = self.find_by_client(client_id)
-        if pref is None:
+        if pref is not None:
+            return pref
+        try:
             pref = self.create(actor_id=actor_id, client_id=client_id)
-        return pref
+            return pref
+        except IntegrityError:
+            self._session.rollback()
+            pref = self.find_by_client(client_id)
+            if pref is None:
+                raise
+            return pref
 
     def find_whatsapp_opted_in(self) -> list[ClientPreference]:
         from app.enums import PreferredChannel

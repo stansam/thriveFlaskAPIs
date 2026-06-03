@@ -223,8 +223,12 @@ class BaseRepository(Generic[M]):
         Only fields present in kwargs are updated.
         """
         for key, value in kwargs.items():
-            if hasattr(obj, key):
-                setattr(obj, key, value)
+            if not hasattr(obj, key):
+                raise AttributeError(
+                    f"{type(obj).__name__} has no attribute '{key}'. "
+                    f"Check for typos in the update call."
+                )
+            setattr(obj, key, value)
         if actor_id and hasattr(obj, "touch"):
             obj.touch(actor_id)
         self._session.flush()

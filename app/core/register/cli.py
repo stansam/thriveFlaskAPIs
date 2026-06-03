@@ -9,7 +9,6 @@ from app.enums import UserRole
 from app.models.base import db as _db
 from app.core.security import hash_password
 from app.repository import user_repo
-from app.interface import auth_service
 
 def _register_cli_commands(app: Flask) -> None:
     """Attach Flask CLI commands."""

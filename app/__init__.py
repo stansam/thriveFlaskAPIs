@@ -40,7 +40,12 @@ from flask import Flask
 
 from app.core.config import get_config
 from app.core.errors import register_error_handlers
-from app.core.register import _register_blueprints, _register_cli_commands, _register_health_check
+from app.core.register import (
+    _register_blueprints,
+    _register_cli_commands,
+    _register_health_check,
+    _register_event_handlers,
+)
 from app.core.logging import _configure_logging
 
 def _register_models() -> None:
@@ -124,6 +129,7 @@ def create_app(env: str | None = None, test_config: dict | None = None) -> Flask
         app.extensions['services'] = _ServiceRegistry()
     # ── 7. Register blueprints ──────────────────────────────────────────
     _register_blueprints(app)
+    _register_event_handlers(app)
 
     # ── 8. Register error handlers ──────────────────────────────────────
     register_error_handlers(app)

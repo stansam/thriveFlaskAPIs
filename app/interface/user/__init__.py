@@ -14,6 +14,7 @@ from app.dto import (
     UserUpdateRequest,
     UserPreferenceResponse,
     UserPreferenceUpdateRequest,
+    UserListResult,
 )
 from app.repository.user import UserRepository
 from app.repository.preference import UserPreferenceRepository
@@ -58,14 +59,14 @@ class UserService:
         audit_service: AuditService,
         uow: IUnitOfWork,
     ) -> None:
-        self._get_op = GetUserOperation(user_repo, user_preference_repo, audit_service, uow)
-        self._get_by_email_op = GetUserByEmailOperation(user_repo, user_preference_repo, audit_service, uow)
-        self._list_op = ListUsersOperation(user_repo, user_preference_repo, audit_service, uow)
+        self._get_op = GetUserOperation(user_repo)
+        self._get_by_email_op = GetUserByEmailOperation(user_repo)
+        self._list_op = ListUsersOperation(user_repo)
         self._create_op = CreateUserOperation(user_repo, user_preference_repo, audit_service, uow)
-        self._update_op = UpdateUserOperation(user_repo, user_preference_repo, audit_service, uow)
-        self._deactivate_op = DeactivateUserOperation(user_repo, user_preference_repo, audit_service, uow)
-        self._reactivate_op = ReactivateUserOperation(user_repo, user_preference_repo, audit_service, uow)
-        self._get_pref_op = GetUserPreferenceOperation(user_repo, user_preference_repo, audit_service, uow)
+        self._update_op = UpdateUserOperation(user_repo, audit_service, uow)
+        self._deactivate_op = DeactivateUserOperation(user_repo, audit_service, uow)
+        self._reactivate_op = ReactivateUserOperation(user_repo, audit_service, uow)
+        self._get_pref_op = GetUserPreferenceOperation(user_repo, user_preference_repo)
         self._update_pref_op = UpdateUserPreferenceOperation(user_repo, user_preference_repo, audit_service, uow)
 
     def get_user(self, user_id: str) -> UserResponse:
@@ -81,7 +82,7 @@ class UserService:
         search: str | None = None,
         page: int = 1,
         per_page: int = 25,
-    ) -> dict:
+    ) -> UserListResult:
         return self._list_op.execute(role, is_active, search, page, per_page)
 
     def create_user(self, data: UserCreateRequest, actor_id: str) -> UserResponse:

@@ -11,7 +11,7 @@ class UserPreferenceUpdateRequest(StrictRequestModel):
     language: Annotated[str | None, Field(default=None, max_length=10)] = None
     dashboard_layout: DashboardLayout | None = None
     items_per_page: Annotated[int | None, Field(default=None, ge=5, le=200)] = None
-    default_booking_channel: str | None = None
+    default_booking_channel: PreferredChannel | None = None
     show_ticket_cost_column: bool | None = None
     auto_send_confirmation: bool | None = None
     notify_new_booking: bool | None = None
@@ -30,7 +30,7 @@ class UserPreferenceResponse(AuditFieldsMixin):
     language: str
     dashboard_layout: DashboardLayout
     items_per_page: int
-    default_booking_channel: str
+    default_booking_channel: PreferredChannel
     show_ticket_cost_column: bool
     auto_send_confirmation: bool
     notify_new_booking: bool

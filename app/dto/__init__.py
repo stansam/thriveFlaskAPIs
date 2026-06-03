@@ -24,69 +24,69 @@ Naming:
   All UUIDs are plain strings (str) — no uuid.UUID type overhead.
 """
 
-from .common import PaginationMeta, AuditFieldsMixin
-from .user import (
+from app.dto.common import PaginationMeta, AuditFieldsMixin
+from app.dto.user import (
     UserCreateRequest, UserUpdateRequest, UserResponse,
     PasswordChangeRequest, PasswordResetRequest, LoginRequest,
-    MFASetupResponse, ForgotPasswordResponse,
+    MFASetupResponse, ForgotPasswordResponse, UserListResult
 )
-from .client import (
+from app.dto.client import (
     ClientCreateRequest, ClientUpdateRequest, ClientResponse, ClientSummaryResponse
 )
-from .corporate import (
+from app.dto.corporate import (
     CorporateAccountCreateRequest, CorporateAccountUpdateRequest, CorporateAccountResponse,
     CorporateSubscriptionCreateRequest, CorporateSubscriptionUpdateRequest,
     CorporateSubscriptionResponse,
 )
-from .package import (
+from app.dto.package import (
     TravelPackageCreateRequest, TravelPackageUpdateRequest, TravelPackageResponse,
     TravelPackageSummaryResponse,
 )
-from .package_items import (
+from app.dto.package_items import (
     PackageHighlightCreateRequest, PackageHighlightResponse,
     PackageInclusionCreateRequest, PackageInclusionResponse,
     PackageItineraryDayCreateRequest, PackageItineraryDayUpdateRequest,
     PackageItineraryDayResponse,
     PackagePriceTierCreateRequest, PackagePriceTierUpdateRequest, PackagePriceTierResponse,
 )
-from .booking import (
+from app.dto.booking import (
     BookingSummaryResponse, BookingStatusTransitionRequest,
 )
-from .flight_booking import (
+from app.dto.flight_booking import (
     FlightBookingCreateRequest, FlightBookingUpdateRequest, FlightBookingResponse,
     FlightSegmentCreateRequest, FlightSegmentResponse,
 )
-from .hotel_booking import (
+from app.dto.hotel_booking import (
     HotelBookingCreateRequest, HotelBookingUpdateRequest, HotelBookingResponse,
 )
-from .car_booking import (
+from app.dto.car_booking import (
     CarBookingCreateRequest, CarBookingUpdateRequest, CarBookingResponse,
 )
-from .package_booking import (
+from app.dto.package_booking import (
     PackageBookingCreateRequest, PackageBookingUpdateRequest, PackageBookingResponse,
 )
-from .booking_passenger import (
+from app.dto.booking_passenger import (
     BookingPassengerCreateRequest, BookingPassengerResponse,
 )
-from .payment import (
+from app.dto.payment import (
     PaymentCreateRequest, PaymentUpdateRequest, PaymentResponse, PaymentConfirmRequest,
 )
-from .fee import (
+from app.dto.fee import (
     ServiceFeeScheduleCreateRequest, ServiceFeeScheduleResponse,
     ServiceFeeCreateRequest, ServiceFeeResponse,
     ServiceFeeSnapshotResponse,
 )
-from .media import MediaAssetResponse, MediaAssetUploadRequest, PackageMediaResponse
-from .preference import (
+from app.dto.media import MediaAssetResponse, MediaAssetUploadRequest, PackageMediaResponse
+from app.dto.preference import (
     UserPreferenceUpdateRequest, UserPreferenceResponse,
     ClientPreferenceUpdateRequest, ClientPreferenceResponse,
 )
-from .notification import (
+from app.dto.notification import (
     NotificationTemplateCreateRequest, NotificationTemplateUpdateRequest,
     NotificationTemplateResponse,
     NotificationResponse, NotificationListResponse,
     NotificationDeliveryResponse,
 )
-from .referral import ReferralResponse, ReferralCreateRequest
-from .loyalty import LoyaltyLedgerEntryResponse, LoyaltyBalanceResponse
-from .audit import AuditLogResponse
+from app.dto.referral import ReferralResponse, ReferralCreateRequest
+from app.dto.loyalty import LoyaltyLedgerEntryResponse, LoyaltyBalanceResponse
+from app.dto.audit import AuditLogResponse

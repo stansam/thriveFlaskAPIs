@@ -90,7 +90,7 @@ class LoginOperation(_BaseAuthOperation):
         if not user.is_active:
             raise AccountInactiveError()
 
-        if user.mfa_secret and not user.mfa_secret.endswith(":pending"):
+        if user.mfa_is_enrolled:
             if not data.totp_code:
                 raise MFARequiredError()
             if not verify_totp(user.mfa_secret, data.totp_code):
@@ -299,7 +299,7 @@ class EnrollMFAOperation(_BaseAuthOperation):
         if not user:
             raise NotFoundError(resource="User", resource_id=str(user_id))
 
-        if user.mfa_secret and not user.mfa_secret.endswith(":pending"):
+        if user.mfa_is_enrolled:
             raise BusinessRuleViolationError("MFA is already enrolled.")
 
         provisional_secret = generate_totp_secret()
@@ -330,7 +330,7 @@ class ConfirmMFAEnrollmentOperation(_BaseAuthOperation):
         if not user:
             raise NotFoundError(resource="User", resource_id=str(user_id))
 
-        if not user.mfa_secret or not user.mfa_secret.endswith(":pending"):
+        if not user.mfa_is_pending:
             raise MFAInvalidError("MFA enrollment has not been started.")
 
         provisional_secret = user.mfa_secret.removesuffix(":pending")
@@ -369,7 +369,7 @@ class DisableMFAOperation(_BaseAuthOperation):
         if not user:
             raise NotFoundError(resource="User", resource_id=str(user_id))
 
-        if not user.mfa_secret or user.mfa_secret.endswith(":pending"):
+        if not user.mfa_is_enrolled:
             raise MFAInvalidError("MFA is not currently enrolled.")
 
         if not verify_totp(user.mfa_secret, totp_code):

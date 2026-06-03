@@ -75,7 +75,7 @@ class AuditService(BaseService):
                 action.value, entity_type, entity_id, exc,
             )
             if strict:
-                from app.core.errors.handlers import BusinessRuleViolationError # Or raise directly
+                from app.core.errors.handlers import BusinessRuleViolationError
                 raise RuntimeError(f"Strict audit log writing failed: {str(exc)}") from exc
             return None
     # Read

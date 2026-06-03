@@ -30,7 +30,7 @@ Usage
         client_id: str
         reference_number: str
 
-    # Register a subscriber (e.g. in services/notification_service.py)
+    # Register a subscriber (e.g. in app/interface/user/events.py)
     @subscribe(BookingConfirmedEvent)
     def send_booking_confirmation(event: BookingConfirmedEvent) -> None:
         notification_service.dispatch(
@@ -62,7 +62,8 @@ from app.core.events.dataclass.base import DomainEvent
 logger = logging.getLogger(__name__)
 
 E = TypeVar("E", bound="DomainEvent")
-SubscriberFn = Callable[["DomainEvent"], None]
+# SubscriberFn = Callable[["DomainEvent"], None]
+SubscriberFn = Callable[[E], None] 
 
 class EventBus:
     """
