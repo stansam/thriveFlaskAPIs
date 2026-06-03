@@ -1,12 +1,11 @@
 from functools import wraps
 import logging
 import redis as redis_lib
-from flask import abort
 from flask_login import UserMixin, current_user
 
 from app.core.config import settings
 from app.core.logging import get_logger
-from app.core.errors.handlers import InsufficientRoleError
+from app.core.errors.handlers import InsufficientRoleError, AuthenticationError
 from app.enums import UserRole
 from app.extensions import login_manager
 from app.repository import user_repo
@@ -99,13 +98,19 @@ def load_user(user_id: str) -> FlaskLoginUser | None:
     return FlaskLoginUser(user)
 
 
+@login_manager.unauthorized_handler
+def unauthorized() -> None:
+    """Raise AuthenticationError when login is required but not provided."""
+    raise AuthenticationError("Authentication required.")
+
+
 def require_roles(*roles: UserRole):
     """Decorator: raise InsufficientRoleError if current_user.domain_user.role not in roles."""
     def decorator(f):
         @wraps(f)
         def decorated_view(*args, **kwargs):
             if not current_user.is_authenticated:
-                abort(401)
+                raise AuthenticationError("Authentication required.")
             if current_user.domain_user.role not in roles:
                 required_roles_str = ", ".join(r.value for r in roles)
                 raise InsufficientRoleError(required_role=required_roles_str)

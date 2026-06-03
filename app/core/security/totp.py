@@ -1,10 +1,10 @@
 from __future__ import annotations
-import logging
 import pyotp
 from argon2.exceptions import VerificationError, VerifyMismatchError
 from app.core.config import settings
+from app.core.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def generate_totp_secret() -> str:

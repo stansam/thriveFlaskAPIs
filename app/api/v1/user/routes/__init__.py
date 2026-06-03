@@ -1,4 +1,3 @@
-from typing import TypedDict, Callable, Sequence
 from app.api.v1.user.routes.routes import (
     UserListCreateView,
     MeView,
@@ -7,11 +6,7 @@ from app.api.v1.user.routes.routes import (
     UserReactivateView,
     UserPreferenceView,
 )
-
-class RouteConfig(TypedDict):
-    url_rule: str
-    view_func: Callable
-    methods: Sequence[str]
+from app.api.v1.utils import RouteConfig
 
 USER_ROUTES: list[RouteConfig] = [
     {

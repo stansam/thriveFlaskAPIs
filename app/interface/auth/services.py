@@ -96,24 +96,25 @@ class LoginOperation(_BaseAuthOperation):
             if not verify_totp(user.mfa_secret, data.totp_code):
                 raise MFAInvalidError()
 
-        if password_needs_rehash(user.password_hash):
-            user.password_hash = hash_password(data.password)
-            logger.info("Re-hashed password for user %s (parameter upgrade).", user.id)
+        with self._uow:
+            if password_needs_rehash(user.password_hash):
+                user.password_hash = hash_password(data.password)
+                logger.info("Re-hashed password for user %s (parameter upgrade).", user.id)
 
-        user.last_login_at = datetime.now(timezone.utc)
-        self._users.save(user)
+            user.last_login_at = datetime.now(timezone.utc)
+            self._users.save(user)
 
-        self._audits.log(
-            actor_id=str(user.id),
-            action=AuditActionType.LOGIN,
-            entity_type="user",
-            entity_id=str(user.id),
-            description=f"User '{user.email}' logged in.",
-            ip_address=ip_address,
-            user_agent=user_agent,
-            strict=True,
-        )
-        self._uow.commit()
+            self._audits.log(
+                actor_id=str(user.id),
+                action=AuditActionType.LOGIN,
+                entity_type="user",
+                entity_id=str(user.id),
+                description=f"User '{user.email}' logged in.",
+                ip_address=ip_address,
+                user_agent=user_agent,
+                strict=True,
+            )
+            self._uow.commit()
 
         flask_user = FlaskLoginUser(user)
         login_user(flask_user, remember=False)
@@ -144,17 +145,18 @@ class LogoutOperation(_BaseAuthOperation):
         if not user:
             raise NotFoundError(resource="User", resource_id=str(user_id))
 
-        self._audits.log(
-            action=AuditActionType.LOGOUT,
-            actor_id=str(user.id),
-            entity_type="user",
-            entity_id=str(user.id),
-            description=f"User '{user.email}' logged out.",
-            ip_address=ip_address,
-            user_agent=user_agent,
-            strict=True,
-        )
-        self._uow.commit()
+        with self._uow:
+            self._audits.log(
+                action=AuditActionType.LOGOUT,
+                actor_id=str(user.id),
+                entity_type="user",
+                entity_id=str(user.id),
+                description=f"User '{user.email}' logged out.",
+                ip_address=ip_address,
+                user_agent=user_agent,
+                strict=True,
+            )
+            self._uow.commit()
         logout_user()
 
         event_bus.publish(UserLoggedOutEvent(user_id=user.id))
@@ -180,23 +182,24 @@ class ChangePasswordOperation(_BaseAuthOperation):
         if data.current_password == data.new_password:
             raise BusinessRuleViolationError("New password must be different.")
 
-        before: dict[str, object] = {"password_hash": "[REDACTED]"}
-        user.password_hash = hash_password(data.new_password)
-        self._users.save(user, actor_id=actor_id)
+        with self._uow:
+            before: dict[str, object] = {"password_hash": "[REDACTED]"}
+            user.password_hash = hash_password(data.new_password)
+            self._users.save(user, actor_id=actor_id)
 
-        self._audits.log(
-            action=AuditActionType.UPDATE,
-            actor_id=actor_id,
-            entity_type="user",
-            entity_id=str(user.id),
-            description=f"Password changed for user '{user.email}'.",
-            before=before,
-            after={"password_hash": "[REDACTED]"},
-            ip_address=ip_address,
-            user_agent=user_agent,
-            strict=True,
-        )
-        self._uow.commit()
+            self._audits.log(
+                action=AuditActionType.UPDATE,
+                actor_id=actor_id,
+                entity_type="user",
+                entity_id=str(user.id),
+                description=f"Password changed for user '{user.email}'.",
+                before=before,
+                after={"password_hash": "[REDACTED]"},
+                ip_address=ip_address,
+                user_agent=user_agent,
+                strict=True,
+            )
+            self._uow.commit()
 
         event_bus.publish(PasswordChangedEvent(user_id=user.id))
         logger.info("Password changed for user %s.", user.id)
@@ -212,17 +215,18 @@ class RequestPasswordResetOperation(_BaseAuthOperation):
         user = self._users.find_by_email(email)
         if user and user.is_active:
             reset_token = create_reset_token(str(user.id))
-            self._audits.log(
-                action=AuditActionType.UPDATE,
-                actor_id=None,
-                entity_type="user",
-                entity_id=str(user.id),
-                description=f"Password reset requested for '{user.email}'.",
-                ip_address=ip_address,
-                user_agent=user_agent,
-                strict=True,
-            )
-            self._uow.commit()
+            with self._uow:
+                self._audits.log(
+                    action=AuditActionType.UPDATE,
+                    actor_id=None,
+                    entity_type="user",
+                    entity_id=str(user.id),
+                    description=f"Password reset requested for '{user.email}'.",
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                    strict=True,
+                )
+                self._uow.commit()
 
             event_bus.publish(PasswordResetRequestedEvent(
                 user_id=user.id,
@@ -252,42 +256,38 @@ class ResetPasswordOperation(_BaseAuthOperation):
         except Exception:
             raise PasswordResetTokenInvalidError()
 
-        if self._denylist.is_consumed(data.token):
-            logger.warning(
-                "Replayed password reset token for user_id=%s from %s.",
-                user_id,
-                ip_address,
-            )
-            raise PasswordResetTokenInvalidError()
-
-        user = self._users.get(user_id)
-        if not user:
-            raise PasswordResetTokenInvalidError()
-
-        user.password_hash = hash_password(data.new_password)
-        self._users.save(user)
-
         consumed = self._denylist.consume(
             data.token,
             ttl_seconds=settings.JWT_RESET_TOKEN_EXPIRES_SECONDS,
         )
         if not consumed:
-            logger.warning("Concurrent reset token use detected for user_id=%s.", user_id)
-            self._uow.rollback()
+            logger.warning(
+                "Password reset token already consumed or invalid for user_id=%s from %s.",
+                user_id,
+                ip_address,
+            )
             raise PasswordResetTokenInvalidError()
 
-        self._audits.log(
-            action=AuditActionType.UPDATE,
-            actor_id=None,
-            entity_type="user",
-            entity_id=str(user.id),
-            description=f"Password reset completed for '{user.email}'.",
-            after={"password_hash": "[REDACTED]"},
-            ip_address=ip_address,
-            user_agent=user_agent,
-            strict=True,
-        )
-        self._uow.commit()
+        with self._uow:
+            user = self._users.get(user_id)
+            if not user:
+                raise PasswordResetTokenInvalidError()
+
+            user.password_hash = hash_password(data.new_password)
+            self._users.save(user)
+
+            self._audits.log(
+                action=AuditActionType.UPDATE,
+                actor_id=None,
+                entity_type="user",
+                entity_id=str(user.id),
+                description=f"Password reset completed for '{user.email}'.",
+                after={"password_hash": "[REDACTED]"},
+                ip_address=ip_address,
+                user_agent=user_agent,
+                strict=True,
+            )
+            self._uow.commit()
 
         event_bus.publish(PasswordResetCompletedEvent(user_id=user.id))
         logger.info("Password reset completed for user %s.", user.id)
@@ -303,9 +303,10 @@ class EnrollMFAOperation(_BaseAuthOperation):
             raise BusinessRuleViolationError("MFA is already enrolled.")
 
         provisional_secret = generate_totp_secret()
-        user.mfa_secret = f"{provisional_secret}:pending"
-        self._users.save(user, actor_id=actor_id)
-        self._uow.commit()
+        with self._uow:
+            user.mfa_secret = f"{provisional_secret}:pending"
+            self._users.save(user, actor_id=actor_id)
+            self._uow.commit()
 
         provisioning_uri = get_totp_provisioning_uri(provisional_secret, user.email)
         qr_data_url = generate_totp_qr_data_url(provisioning_uri)
@@ -337,20 +338,21 @@ class ConfirmMFAEnrollmentOperation(_BaseAuthOperation):
         if not verify_totp(provisional_secret, totp_code):
             raise MFAInvalidError()
 
-        user.mfa_secret = provisional_secret
-        self._users.save(user, actor_id=actor_id)
+        with self._uow:
+            user.mfa_secret = provisional_secret
+            self._users.save(user, actor_id=actor_id)
 
-        self._audits.log(
-            action=AuditActionType.UPDATE,
-            actor_id=actor_id,
-            entity_type="user",
-            entity_id=str(user.id),
-            description=f"MFA enrollment confirmed for '{user.email}'.",
-            ip_address=ip_address,
-            user_agent=user_agent,
-            strict=True,
-        )
-        self._uow.commit()
+            self._audits.log(
+                action=AuditActionType.UPDATE,
+                actor_id=actor_id,
+                entity_type="user",
+                entity_id=str(user.id),
+                description=f"MFA enrollment confirmed for '{user.email}'.",
+                ip_address=ip_address,
+                user_agent=user_agent,
+                strict=True,
+            )
+            self._uow.commit()
 
         event_bus.publish(MFAEnrolledEvent(user_id=user.id))
         logger.info("MFA activated for user %s.", user_id)
@@ -375,20 +377,21 @@ class DisableMFAOperation(_BaseAuthOperation):
         if not verify_totp(user.mfa_secret, totp_code):
             raise MFAInvalidError()
 
-        user.mfa_secret = None
-        self._users.save(user, actor_id=actor_id)
+        with self._uow:
+            user.mfa_secret = None
+            self._users.save(user, actor_id=actor_id)
 
-        self._audits.log(
-            action=AuditActionType.UPDATE,
-            actor_id=actor_id,
-            entity_type="user",
-            entity_id=str(user.id),
-            description=f"MFA disabled for '{user.email}'.",
-            ip_address=ip_address,
-            user_agent=user_agent,
-            strict=True,
-        )
-        self._uow.commit()
+            self._audits.log(
+                action=AuditActionType.UPDATE,
+                actor_id=actor_id,
+                entity_type="user",
+                entity_id=str(user.id),
+                description=f"MFA disabled for '{user.email}'.",
+                ip_address=ip_address,
+                user_agent=user_agent,
+                strict=True,
+            )
+            self._uow.commit()
 
         event_bus.publish(MFADisabledEvent(user_id=user.id))
         logger.info("MFA disabled for user %s.", user_id)

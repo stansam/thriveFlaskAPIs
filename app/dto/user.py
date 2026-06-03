@@ -155,7 +155,11 @@ class UserResponse(AuditFieldsMixin):
         })
 
 class TokenResponse(ResponseModel):
-    """POST /auth/login response."""
+    """
+    POST /auth/login response shape — RESERVED FOR FUTURE JWT MIGRATION.
+    Currently unused: the system uses Flask-Login session cookies (not JWT).
+    Do not remove without updating this comment.
+    """
     access_token: str
     token_type: str = "bearer"
     expires_in: int = Field(description="Seconds until token expiry.")

@@ -15,3 +15,10 @@ class KayakAPIError(ExternalServiceError):
 
     def __init__(self, **kwargs):
         super().__init__(service="Flight search service", **kwargs)
+
+
+class AuditWriteError(ExternalServiceError):
+    error_code = "AUDIT_WRITE_FAILED"
+
+    def __init__(self, message: str = "Audit log write failed.", **kwargs):
+        super().__init__(service="Audit log service", message=message, **kwargs)

@@ -23,7 +23,7 @@ from sqlalchemy import and_, select
 from app.models.base import db
 from app.enums import AuditActionType
 from app.models import AuditLog
-from app.core.errors.handlers import NotFoundError
+from app.core.errors.handlers import NotFoundError, AuditWriteError
 from app.dto import AuditLogResponse
 from app.repository import audit_repo, user_repo
 from app.interface._base import BaseService
@@ -75,8 +75,7 @@ class AuditService(BaseService):
                 action.value, entity_type, entity_id, exc,
             )
             if strict:
-                from app.core.errors.handlers import BusinessRuleViolationError
-                raise RuntimeError(f"Strict audit log writing failed: {str(exc)}") from exc
+                raise AuditWriteError(message=f"Strict audit log writing failed: {str(exc)}")
             return None
     # Read
     def get_entity_history(

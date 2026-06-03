@@ -24,5 +24,5 @@ from app.core.errors.handlers.rate_limit import(
     RateLimitExceededError, SubscriptionLimitError
 )
 from app.core.errors.handlers.bad_gateway import(
-    ExternalServiceError, KayakAPIError
+    ExternalServiceError, KayakAPIError, AuditWriteError
 )

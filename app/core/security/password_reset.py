@@ -1,12 +1,12 @@
 import hashlib
 import hmac
 import time
-import logging
+from app.core.logging import get_logger
 
 from app.core.errors.handlers import PasswordResetTokenInvalidError
 from app.core.config import settings
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 _RESET_SEP = "."
 

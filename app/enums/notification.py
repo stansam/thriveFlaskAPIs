@@ -36,6 +36,9 @@ class NotificationEventType(str, Enum):
     USER_PASSWORD_RESET       = "user_password_reset"
     USER_LOGIN_NEW_DEVICE     = "user_login_new_device"
     USER_CREATED              = "user_created"
+    USER_PASSWORD_CHANGED     = "user_password_changed"
+    USER_MFA_ENROLLED         = "user_mfa_enrolled"
+    USER_MFA_DISABLED         = "user_mfa_disabled"
 
     # Admin
     ADMIN_BOOKING_ASSIGNED    = "admin_booking_assigned"
