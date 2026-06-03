@@ -11,6 +11,7 @@ from app.enums import UserRole
 from app.dto import (
     UserCreateRequest,
     UserResponse,
+    AdminUserResponse,
     UserUpdateRequest,
     UserPreferenceResponse,
     UserPreferenceUpdateRequest,
@@ -69,11 +70,11 @@ class UserService:
         self._get_pref_op = GetUserPreferenceOperation(user_repo, user_preference_repo)
         self._update_pref_op = UpdateUserPreferenceOperation(user_repo, user_preference_repo, audit_service, uow)
 
-    def get_user(self, user_id: str) -> UserResponse:
-        return self._get_op.execute(user_id)
+    def get_user(self, user_id: str, is_admin: bool = False) -> UserResponse | AdminUserResponse:
+        return self._get_op.execute(user_id, is_admin=is_admin)
 
-    def get_user_by_email(self, email: str) -> UserResponse:
-        return self._get_by_email_op.execute(email)
+    def get_user_by_email(self, email: str, is_admin: bool = False) -> UserResponse | AdminUserResponse:
+        return self._get_by_email_op.execute(email, is_admin=is_admin)
 
     def list_users(
         self,
@@ -85,16 +86,16 @@ class UserService:
     ) -> UserListResult:
         return self._list_op.execute(role, is_active, search, page, per_page)
 
-    def create_user(self, data: UserCreateRequest, actor_id: str) -> UserResponse:
+    def create_user(self, data: UserCreateRequest, actor_id: str) -> AdminUserResponse:
         return self._create_op.execute(data, actor_id)
 
-    def update_user(self, user_id: str, data: UserUpdateRequest, actor_id: str) -> UserResponse:
-        return self._update_op.execute(user_id, data, actor_id)
+    def update_user(self, user_id: str, data: UserUpdateRequest, actor_id: str, is_admin: bool = False) -> UserResponse | AdminUserResponse:
+        return self._update_op.execute(user_id, data, actor_id, is_admin=is_admin)
 
-    def deactivate_user(self, user_id: str, actor_id: str) -> UserResponse:
+    def deactivate_user(self, user_id: str, actor_id: str) -> AdminUserResponse:
         return self._deactivate_op.execute(user_id, actor_id)
 
-    def reactivate_user(self, user_id: str, actor_id: str) -> UserResponse:
+    def reactivate_user(self, user_id: str, actor_id: str) -> AdminUserResponse:
         return self._reactivate_op.execute(user_id, actor_id)
 
     def get_preference(self, user_id: str) -> UserPreferenceResponse:

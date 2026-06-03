@@ -85,13 +85,11 @@ class UserDetailView(MethodView):
 
     def get(self, user_id: str) -> tuple:
         actor = current_user.domain_user
-        if current_user.get_id() != user_id and actor.role not in (
-            UserRole.ADMIN,
-            UserRole.SUPER_ADMIN,
-        ):
+        is_admin = actor.role in (UserRole.ADMIN, UserRole.SUPER_ADMIN)
+        if current_user.get_id() != user_id and not is_admin:
             raise InsufficientRoleError("admin")
 
-        result = get_services().user.get_user(user_id)
+        result = get_services().user.get_user(user_id, is_admin=is_admin)
         return success_response(
             data=result.model_dump(mode="json"),
             message="User profile retrieved successfully.",
@@ -99,7 +97,8 @@ class UserDetailView(MethodView):
 
     def patch(self, user_id: str) -> tuple:
         actor = current_user.domain_user
-        if actor.role in (UserRole.ADMIN, UserRole.SUPER_ADMIN):
+        is_admin = actor.role in (UserRole.ADMIN, UserRole.SUPER_ADMIN)
+        if is_admin:
             schema = UserAdminUpdateSchema()
         elif current_user.get_id() == user_id:
             schema = UserSelfUpdateSchema()
@@ -110,7 +109,7 @@ class UserDetailView(MethodView):
         data = UserUpdateRequest.model_validate(payload)
         actor_id = current_user.get_id()
 
-        result = get_services().user.update_user(user_id, data, actor_id=actor_id)
+        result = get_services().user.update_user(user_id, data, actor_id=actor_id, is_admin=is_admin)
         return success_response(
             data=result.model_dump(mode="json"),
             message="User profile updated successfully.",

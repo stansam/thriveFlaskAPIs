@@ -11,7 +11,7 @@ from typing import Any
 import logging
 
 from app.interface._base import BaseService
-from app.dto import UserResponse
+from app.dto import UserResponse, AdminUserResponse
 from app.enums import AuditActionType, UserRole
 from app.core.errors.handlers import (
     BadRequestError,
@@ -46,10 +46,12 @@ class GetUserOperation:
     def __init__(self, user_repo: UserRepository) -> None:
         self._users = user_repo
 
-    def execute(self, user_id: str) -> UserResponse:
+    def execute(self, user_id: str, is_admin: bool = False) -> UserResponse | AdminUserResponse:
         user = self._users.get(user_id)
         if not user:
             raise NotFoundError("User", user_id)
+        if is_admin:
+            return AdminUserResponse.from_user(user)
         return UserResponse.from_user(user)
 
 
@@ -57,10 +59,12 @@ class GetUserByEmailOperation:
     def __init__(self, user_repo: UserRepository) -> None:
         self._users = user_repo
 
-    def execute(self, email: str) -> UserResponse:
+    def execute(self, email: str, is_admin: bool = False) -> UserResponse | AdminUserResponse:
         user = self._users.find_by_email(email.lower().strip())
         if not user:
             raise NotFoundError("User", email)
+        if is_admin:
+            return AdminUserResponse.from_user(user)
         return UserResponse.from_user(user)
 
 
@@ -84,7 +88,7 @@ class ListUsersOperation:
             per_page=per_page,
         )
         return UserListResult(
-            items=[UserResponse.from_user(u) for u in result.items],
+            items=[AdminUserResponse.from_user(u) for u in result.items],
             total=result.total,
             page=result.page,
             per_page=result.per_page,
@@ -107,7 +111,7 @@ class CreateUserOperation(BaseService):
         self._audits = audit_service
         self._uow = uow
 
-    def execute(self, data: UserCreateRequest, actor_id: str) -> UserResponse:
+    def execute(self, data: UserCreateRequest, actor_id: str) -> AdminUserResponse:
         email = data.email.lower().strip()
         if self._users.exists(email=email):
             raise DuplicateEmailError(email)
@@ -148,7 +152,7 @@ class CreateUserOperation(BaseService):
         )
         logger.info("User created: %s (id=%s) by actor=%s", email, user.id, actor_id)
         
-        return UserResponse.from_user(user)
+        return AdminUserResponse.from_user(user)
 
 
 class UpdateUserOperation(BaseService):
@@ -167,7 +171,8 @@ class UpdateUserOperation(BaseService):
         user_id: str,
         data: UserUpdateRequest,
         actor_id: str,
-    ) -> UserResponse:
+        is_admin: bool = False,
+    ) -> UserResponse | AdminUserResponse:
         user = self._users.get(user_id)
         if not user:
             raise NotFoundError("User", user_id)
@@ -199,6 +204,8 @@ class UpdateUserOperation(BaseService):
             )
         )
         logger.info("User updated: %s (id=%s) fields=%s by actor=%s", user.email, user.id, list(updates.keys()), actor_id)
+        if is_admin:
+            return AdminUserResponse.from_user(user)
         return UserResponse.from_user(user)
 
 
@@ -213,7 +220,7 @@ class DeactivateUserOperation(BaseService):
         self._audits = audit_service
         self._uow = uow
 
-    def execute(self, user_id: str, actor_id: str) -> UserResponse:
+    def execute(self, user_id: str, actor_id: str) -> AdminUserResponse:
         user = self._users.get(user_id)
         if not user:
             raise NotFoundError("User", user_id)
@@ -245,7 +252,7 @@ class DeactivateUserOperation(BaseService):
 
         event_bus.publish(UserDeactivatedEvent(user_id=user.id, actor_id=actor_id))
         logger.info("User deactivated: %s (id=%s) by actor=%s", user.email, user.id, actor_id)
-        return UserResponse.from_user(user)
+        return AdminUserResponse.from_user(user)
 
 
 class ReactivateUserOperation(BaseService):
@@ -259,7 +266,7 @@ class ReactivateUserOperation(BaseService):
         self._audits = audit_service
         self._uow = uow
 
-    def execute(self, user_id: str, actor_id: str) -> UserResponse:
+    def execute(self, user_id: str, actor_id: str) -> AdminUserResponse:
         user = self._users.get(user_id)
         if not user:
             raise NotFoundError("User", user_id)
@@ -270,7 +277,7 @@ class ReactivateUserOperation(BaseService):
                 user.email,
                 user_id,
             )
-            return UserResponse.from_user(user)
+            return AdminUserResponse.from_user(user)
             
         before = self._snapshot(user, ["is_active"])
 
@@ -291,7 +298,7 @@ class ReactivateUserOperation(BaseService):
 
         event_bus.publish(UserReactivatedEvent(user_id=user.id, actor_id=actor_id))
         logger.info("User reactivated: %s (id=%s) by actor=%s", user.email, user.id, actor_id)
-        return UserResponse.from_user(user)
+        return AdminUserResponse.from_user(user)
 
 
 class GetUserPreferenceOperation:

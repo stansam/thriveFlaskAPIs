@@ -8,7 +8,7 @@ by the AuthService facade.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from flask_login import login_user, logout_user
 from argon2 import PasswordHasher
@@ -39,6 +39,11 @@ from app.core.security import (
     create_reset_token,
     verify_reset_token,
     generate_totp_qr_data_url,
+)
+from app.core.security.login_guard import (
+    is_ip_locked,
+    record_failed_attempt,
+    clear_attempts,
 )
 from app.core.token_denylist import ITokenDenylist
 from app.core.unit_of_work import IUnitOfWork
@@ -76,6 +81,11 @@ class LoginOperation(_BaseAuthOperation):
         ip_address: str = "",
         user_agent: str = "",
     ) -> UserResponse:
+        # 1. IP-level lockout check (before any DB query)
+        if is_ip_locked(ip_address):
+            logger.warning("Login blocked: IP %s is currently locked.", ip_address)
+            raise InvalidCredentialsError()
+
         user = self._users.find_by_email(data.email)
         check_hash = user.password_hash if user else PasswordHasher().hash("_dummy_")
 
@@ -85,7 +95,19 @@ class LoginOperation(_BaseAuthOperation):
                 data.email,
                 ip_address,
             )
+            # Record IP-level failure
+            record_failed_attempt(ip_address)
+            # Record account-level failure (only if user exists — don't inflate count for ghost emails)
+            if user:
+                self._increment_failed_attempts(user, ip_address)
             raise InvalidCredentialsError()
+
+        # 2. Account lockout check (after credential verification)
+        if user.is_locked:
+            logger.warning(
+                "Login blocked: account %s locked until %s", user.id, user.locked_until
+            )
+            raise AccountInactiveError("Account is temporarily locked due to repeated failed login attempts.")
 
         if not user.is_active:
             raise AccountInactiveError()
@@ -93,10 +115,17 @@ class LoginOperation(_BaseAuthOperation):
         if user.mfa_is_enrolled:
             if not data.totp_code:
                 raise MFARequiredError()
-            if not verify_totp(user.mfa_secret, data.totp_code):
+            if user.mfa_secret is not None and not verify_totp(user.mfa_secret, data.totp_code):
+                record_failed_attempt(ip_address)
+                self._increment_failed_attempts(user, ip_address)
                 raise MFAInvalidError()
 
+        # 3. Successful login — clear counters
+        clear_attempts(ip_address)
         with self._uow:
+            user.failed_login_count = 0
+            user.locked_until = None
+
             if password_needs_rehash(user.password_hash):
                 user.password_hash = hash_password(data.password)
                 logger.info("Re-hashed password for user %s (parameter upgrade).", user.id)
@@ -132,6 +161,28 @@ class LoginOperation(_BaseAuthOperation):
             ip_address,
         )
         return UserResponse.from_user(user)
+
+    def _increment_failed_attempts(self, user, ip_address: str) -> None:
+        """Increment failed login counter and apply lockout if threshold reached."""
+        count = (user.failed_login_count or 0) + 1
+        locked_until = None
+        if count >= 20:
+            locked_until = datetime.now(timezone.utc) + timedelta(hours=24)
+        elif count >= 10:
+            locked_until = datetime.now(timezone.utc) + timedelta(hours=1)
+        elif count >= 5:
+            locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
+
+        with self._uow:
+            user.failed_login_count = count
+            user.locked_until = locked_until
+            self._users.save(user)
+            self._uow.commit()
+
+        if locked_until:
+            logger.warning(
+                "Account %s locked until %s after %d failed attempts.", user.id, locked_until, count
+            )
 
 
 class LogoutOperation(_BaseAuthOperation):
@@ -334,8 +385,8 @@ class ConfirmMFAEnrollmentOperation(_BaseAuthOperation):
         if not user.mfa_is_pending:
             raise MFAInvalidError("MFA enrollment has not been started.")
 
-        provisional_secret = user.mfa_secret.removesuffix(":pending")
-        if not verify_totp(provisional_secret, totp_code):
+        provisional_secret = user.mfa_secret.removesuffix(":pending") if user.mfa_secret else None
+        if not provisional_secret or not verify_totp(provisional_secret, totp_code):
             raise MFAInvalidError()
 
         with self._uow:
@@ -374,7 +425,7 @@ class DisableMFAOperation(_BaseAuthOperation):
         if not user.mfa_is_enrolled:
             raise MFAInvalidError("MFA is not currently enrolled.")
 
-        if not verify_totp(user.mfa_secret, totp_code):
+        if not user.mfa_secret or not verify_totp(user.mfa_secret, totp_code):
             raise MFAInvalidError()
 
         with self._uow:

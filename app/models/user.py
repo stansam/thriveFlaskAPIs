@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any
 
-from datetime import datetime
-from sqlalchemy import Boolean, Enum, String, DateTime
+from datetime import datetime, timezone
+from sqlalchemy import Boolean, Enum, String, DateTime, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import AuditMixin, db
@@ -41,6 +41,12 @@ class User(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     last_login_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    failed_login_count: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False, server_default="0"
+    )
+    locked_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
 
     # Relationships
     audit_logs: Mapped[list["AuditLog"]] = relationship(
@@ -65,6 +71,13 @@ class User(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     @property
     def mfa_is_pending(self) -> bool:
         return bool(self.mfa_secret and self.mfa_secret.endswith(":pending"))
+
+    @property
+    def is_locked(self) -> bool:
+        """True if account is currently under brute-force lockout."""
+        if self.locked_until is None:
+            return False
+        return datetime.now(timezone.utc) < self.locked_until
 
     def __init__(self, **kwargs: Any) -> None:
         super(User, self).__init__(**kwargs)

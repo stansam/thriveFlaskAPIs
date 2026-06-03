@@ -121,6 +121,9 @@ def mock_user() -> MagicMock:
     user.mfa_secret = None
     user.last_login_at = None
     user.role = UserRole.AGENT
+    user.failed_login_count = 0
+    user.locked_until = None
+    user.is_locked = False
     user.to_audit_dict.return_value = {
         "id": "user-abc-123",
         "created_at": "2024-01-01T00:00:00Z",
@@ -479,3 +482,53 @@ def test_disable_mfa_not_enrolled(service, user_repo, mock_user):
 
     with pytest.raises(MFAInvalidError):
         service.disable_mfa("user-abc-123", "123456", "user-abc-123")
+
+
+# ── Lockout & Brute Force Protection ─────────────────────────────────────────
+
+@patch("app.interface.auth.services.event_bus")
+def test_login_increments_failed_count_on_wrong_password(mock_bus, service, user_repo, mock_user):
+    user_repo.find_by_email.return_value = mock_user
+    mock_user.failed_login_count = 2
+
+    with pytest.raises(InvalidCredentialsError):
+        service.login(_login_req(password="WrongPassword!"))
+
+    assert mock_user.failed_login_count == 3
+    assert mock_user.locked_until is None
+
+
+@patch("app.interface.auth.services.event_bus")
+def test_login_locks_account_after_5_failures(mock_bus, service, user_repo, mock_user):
+    user_repo.find_by_email.return_value = mock_user
+    mock_user.failed_login_count = 4
+
+    with pytest.raises(InvalidCredentialsError):
+        service.login(_login_req(password="WrongPassword!"))
+
+    assert mock_user.failed_login_count == 5
+    assert mock_user.locked_until is not None
+
+
+@patch("app.interface.auth.services.event_bus")
+def test_login_blocked_when_account_locked(mock_bus, service, user_repo, mock_user):
+    user_repo.find_by_email.return_value = mock_user
+    mock_user.is_locked = True
+
+    with pytest.raises(AccountInactiveError) as exc_info:
+        service.login(_login_req())
+
+    assert "temporarily locked" in str(exc_info.value)
+
+
+@patch("app.interface.auth.services.event_bus")
+@patch("app.interface.auth.services.login_user")
+def test_login_clears_counter_on_success(mock_login_user, mock_bus, service, user_repo, mock_user):
+    user_repo.find_by_email.return_value = mock_user
+    mock_user.failed_login_count = 3
+    mock_user.locked_until = datetime.now()
+
+    service.login(_login_req())
+
+    assert mock_user.failed_login_count == 0
+    assert mock_user.locked_until is None

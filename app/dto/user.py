@@ -132,7 +132,7 @@ class LoginRequest(StrictRequestModel):
 
 # Responses
 class UserResponse(AuditFieldsMixin):
-    """Full user profile returned to admin endpoints."""
+    """Full user profile returned to public/self endpoints."""
     full_name: str
     email: str
     phone: str | None
@@ -152,6 +152,26 @@ class UserResponse(AuditFieldsMixin):
             "is_active": user.is_active,
             "mfa_enrolled": user.mfa_is_enrolled,
             "last_login_at": user.last_login_at,
+        })
+
+class AdminUserResponse(UserResponse):
+    """Full user profile returned to admin endpoints, including brute-force lockout status."""
+    failed_login_count: int = 0
+    locked_until: datetime | None = None
+
+    @classmethod
+    def from_user(cls, user) -> "AdminUserResponse":
+        return cls.model_validate({
+            **user.to_audit_dict(),
+            "full_name": user.full_name,
+            "email": user.email,
+            "phone": user.phone,
+            "role": user.role,
+            "is_active": user.is_active,
+            "mfa_enrolled": user.mfa_is_enrolled,
+            "last_login_at": user.last_login_at,
+            "failed_login_count": user.failed_login_count or 0,
+            "locked_until": user.locked_until,
         })
 
 class TokenResponse(ResponseModel):
@@ -175,7 +195,7 @@ class ForgotPasswordResponse(ResponseModel):
 
 @dataclass(frozen=True)
 class UserListResult:
-    items: list[UserResponse]
+    items: list[UserResponse | AdminUserResponse]
     total: int
     page: int
     per_page: int

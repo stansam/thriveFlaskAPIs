@@ -197,3 +197,22 @@ def test_rate_limit_exceeded_error_handling(client, json_headers):
         res_data = resp.get_json()
         assert res_data["error"] == "RATE_LIMIT_EXCEEDED"
         assert res_data["message"] == "Too many requests. Please try again later."
+
+
+def test_login_account_locked_returns_401(client, test_user, json_headers):
+    from datetime import datetime, timezone, timedelta
+    test_user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
+    
+    payload = {
+        "email": test_user.email,
+        "password": "Password123!",
+    }
+    resp = client.post(
+        "/api/v1/auth/login",
+        data=json.dumps(payload),
+        headers=json_headers,
+    )
+    assert resp.status_code == HTTPStatus.UNAUTHORIZED
+    res_data = resp.get_json()
+    assert res_data["error"] == "ACCOUNT_INACTIVE"
+    assert "locked" in res_data["message"]

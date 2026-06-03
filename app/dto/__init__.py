@@ -26,7 +26,7 @@ Naming:
 
 from app.dto.common import PaginationMeta, AuditFieldsMixin
 from app.dto.user import (
-    UserCreateRequest, UserUpdateRequest, UserResponse,
+    UserCreateRequest, UserUpdateRequest, UserResponse, AdminUserResponse,
     PasswordChangeRequest, PasswordResetRequest, LoginRequest,
     MFASetupResponse, ForgotPasswordResponse, UserListResult
 )
