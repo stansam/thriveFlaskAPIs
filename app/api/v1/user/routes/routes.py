@@ -25,6 +25,8 @@ from app.api.v1.user.schemas import (
     UserListQuerySchema,
     UserAdminUpdateSchema,
     UserSelfUpdateSchema,
+    UserCreateSchema,
+    UserPreferenceUpdateSchema,
 )
 
 
@@ -58,7 +60,11 @@ class UserListCreateView(MethodView):
         )
 
     def post(self) -> tuple:
-        data = UserCreateRequest.model_validate(request.get_json(force=True))
+        json_data = request.get_json()
+        if json_data is None:
+            raise BadRequestError("Invalid JSON payload.")
+        payload = UserCreateSchema().load(json_data)
+        data = UserCreateRequest.model_validate(payload)
         actor_id = current_user.get_id()
 
         result = get_services().user.create_user(data, actor_id=actor_id)
@@ -105,7 +111,10 @@ class UserDetailView(MethodView):
         else:
             raise InsufficientRoleError("admin")
 
-        payload = schema.load(request.get_json(force=True))
+        json_data = request.get_json()
+        if json_data is None:
+            raise BadRequestError("Invalid JSON payload.")
+        payload = schema.load(json_data)
         data = UserUpdateRequest.model_validate(payload)
         actor_id = current_user.get_id()
 
@@ -168,9 +177,11 @@ class UserPreferenceView(MethodView):
         ):
             raise InsufficientRoleError("admin")
 
-        data = UserPreferenceUpdateRequest.model_validate(
-            request.get_json(force=True)
-        )
+        json_data = request.get_json()
+        if json_data is None:
+            raise BadRequestError("Invalid JSON payload.")
+        payload = UserPreferenceUpdateSchema().load(json_data)
+        data = UserPreferenceUpdateRequest.model_validate(payload)
         actor_id = current_user.get_id()
         result = get_services().user.update_preference(
             user_id,

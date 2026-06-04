@@ -32,6 +32,7 @@ Flask-Login
 Flask-Mail
 Flask-Migrate
 Flask-SQLAlchemy
+Flask-WTF
 greenlet
 h11
 httpcore
@@ -79,4 +80,5 @@ vine
 wcwidth
 Werkzeug
 wrapt
+WTForms
 yarg
