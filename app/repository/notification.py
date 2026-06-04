@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from sqlalchemy import select as _nselect
 from app.models import Notification, NotificationTemplate
 from app.enums import (
@@ -98,12 +99,11 @@ class NotificationRepository(BaseRepository[Notification]):
         notification: Notification,
         actor_id: str | None = None,
     ) -> Notification:
-        from datetime import datetime
         return self.update(
             notification,
             actor_id=actor_id,
             status=NotificationStatus.READ,
-            read_at=datetime.utcnow(),
+            read_at=datetime.now(timezone.utc),
         )
 
     def mark_all_read(
@@ -112,7 +112,6 @@ class NotificationRepository(BaseRepository[Notification]):
         recipient_id: str,
     ) -> int:
         """Bulk mark all unread notifications as read. Returns count updated."""
-        from datetime import datetime
         notifications = self._session.execute(
             _nselect(Notification).where(
                 Notification.recipient_type == recipient_type,
@@ -123,7 +122,7 @@ class NotificationRepository(BaseRepository[Notification]):
                 ]),
             )
         ).scalars().all()
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         for n in notifications:
             n.status = NotificationStatus.READ
             n.read_at = now
@@ -131,8 +130,7 @@ class NotificationRepository(BaseRepository[Notification]):
         return len(notifications)
 
     def find_scheduled_ready(self, as_of=None) -> list[Notification]:
-        from datetime import datetime
-        now = as_of or datetime.utcnow()
+        now = as_of or datetime.now(timezone.utc)
         stmt = (
             _nselect(Notification)
             .where(

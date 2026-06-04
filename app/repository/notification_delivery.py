@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from sqlalchemy import select as _nselect
 
 from app.models import NotificationDelivery
@@ -22,8 +23,7 @@ class NotificationDeliveryRepository(BaseRepository[NotificationDelivery]):
         return list(self._session.execute(stmt).scalars().all())
 
     def find_retryable(self, as_of=None) -> list[NotificationDelivery]:
-        from datetime import datetime
-        now = as_of or datetime.utcnow()
+        now = as_of or datetime.now(timezone.utc)
         stmt = (
             _nselect(NotificationDelivery)
             .where(

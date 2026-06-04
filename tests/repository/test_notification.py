@@ -1,5 +1,5 @@
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.repository.notification import NotificationRepository, NotificationTemplateRepository
 from app.models import Notification, NotificationTemplate
 from app.enums import NotificationStatus, NotificationEventType, NotificationChannel, RecipientType, NotificationPriority
@@ -82,7 +82,7 @@ class TestNotificationRepositories:
         assert n1.status == NotificationStatus.READ
 
     def test_scheduled_ready(self, repo, db_session):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         n = Notification(
             event_type=NotificationEventType.BOOKING_CONFIRMED,
             recipient_type=RecipientType.CLIENT, recipient_id="C1",

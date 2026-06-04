@@ -1,5 +1,5 @@
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.repository.notification_delivery import NotificationDeliveryRepository
 from app.models import NotificationDelivery, Notification
 from app.enums import NotificationChannel, DeliveryStatus, NotificationEventType, RecipientType, NotificationPriority, NotificationStatus
@@ -20,7 +20,7 @@ class TestNotificationDeliveryRepository:
         db_session.add(n)
         db_session.flush()
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         d1 = NotificationDelivery(
             notification_id=str(n.id), channel=NotificationChannel.EMAIL,
             status=DeliveryStatus.SENT, recipient_address="a@a.com",
