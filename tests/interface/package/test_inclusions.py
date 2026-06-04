@@ -2,7 +2,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from app.dto import PackageInclusionCreateRequest
+from app.dto import PackageInclusionCreateRequest, PackageInclusionUpdateRequest
 from app.core.events.dataclass.package import (
     PackageInclusionAddedEvent, PackageInclusionUpdatedEvent, PackageInclusionDeletedEvent
 )
@@ -31,7 +31,8 @@ def test_add_inclusion(mock_bus, service, package_repo, package_inclusion_repo, 
 def test_update_inclusion(mock_bus, service, package_inclusion_repo, uow, mock_inclusion):
     package_inclusion_repo.get.return_value = mock_inclusion
 
-    result = service.update_inclusion("inc-1", {"label": "Updated Drinks"}, actor_id="admin-1")
+    req = PackageInclusionUpdateRequest.model_validate({"label": "Updated Drinks"})
+    result = service.update_inclusion("inc-1", req, actor_id="admin-1")
 
     package_inclusion_repo.update.assert_called_once()
     assert uow.committed == 1

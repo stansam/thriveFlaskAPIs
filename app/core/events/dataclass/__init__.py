@@ -30,7 +30,9 @@ from app.core.events.dataclass.package import(
     PackageHighlightAddedEvent, PackageHighlightUpdatedEvent, PackageHighlightDeletedEvent,
     PackageInclusionAddedEvent, PackageInclusionUpdatedEvent, PackageInclusionDeletedEvent,
     PackageItineraryDayAddedEvent, PackageItineraryDayUpdatedEvent, PackageItineraryDayDeletedEvent,
-    PackagePriceTierAddedEvent, PackagePriceTierUpdatedEvent, PackagePriceTierDeactivatedEvent
+    PackagePriceTierAddedEvent, PackagePriceTierUpdatedEvent, PackagePriceTierDeactivatedEvent,
+    PackageMediaAttachedEvent, PackageMediaRemovedEvent,
+    PackageInsuranceAddedEvent, PackageInsuranceUpdatedEvent, PackageInsuranceDeletedEvent
 )
 
 from app.core.events.dataclass.payment import(
@@ -95,6 +97,11 @@ __all__ = [
     "PackagePriceTierAddedEvent",
     "PackagePriceTierUpdatedEvent",
     "PackagePriceTierDeactivatedEvent",
+    "PackageMediaAttachedEvent",
+    "PackageMediaRemovedEvent",
+    "PackageInsuranceAddedEvent",
+    "PackageInsuranceUpdatedEvent",
+    "PackageInsuranceDeletedEvent",
     "PaymentReceivedEvent",
     "PaymentRefundedEvent",
     "ReferralQualifiedEvent",

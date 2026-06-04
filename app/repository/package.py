@@ -12,6 +12,7 @@ from app.enums import PackageStatus
 from .base import BaseRepository, Page
 
 from app.core.logging import get_logger
+from app.core.errors.handlers.not_found import NotFoundError
 
 logger = get_logger(__name__)
 
@@ -24,10 +25,9 @@ class TravelPackageRepository(BaseRepository[TravelPackage]):
         return self._session.execute(stmt).scalar_one_or_none()
 
     def find_by_slug_or_404(self, slug: str) -> TravelPackage:
-        from werkzeug.exceptions import NotFound
         pkg = self.find_by_slug(slug)
         if pkg is None:
-            raise NotFound(f"Package '{slug}' not found.")
+            raise NotFoundError("Package", slug)
         return pkg
 
     def find_active(self) -> list[TravelPackage]:

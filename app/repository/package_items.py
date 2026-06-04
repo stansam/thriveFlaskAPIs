@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, func
 from app.models import PackageHighlight, PackageInclusion, PackageItineraryDay
 from app.repository.base import BaseRepository
 
@@ -30,6 +30,14 @@ class PackageHighlightRepository(BaseRepository[PackageHighlight]):
             if hid in highlights:
                 self.update(highlights[hid], actor_id=actor_id, display_order=idx)
 
+    def max_display_order(self, package_id: str) -> int:
+        stmt = (
+            select(func.max(PackageHighlight.display_order))
+            .where(PackageHighlight.package_id == package_id)
+        )
+        result = self._session.execute(stmt).scalar_one_or_none()
+        return result if result is not None else -1
+
 class PackageInclusionRepository(BaseRepository[PackageInclusion]):
     model = PackageInclusion
 
@@ -40,6 +48,18 @@ class PackageInclusionRepository(BaseRepository[PackageInclusion]):
             .order_by(PackageInclusion.inclusion_type, PackageInclusion.display_order)
         )
         return list(self._session.execute(stmt).scalars().all())
+
+    def reorder(
+        self,
+        package_id: str,
+        ordered_ids: list[str],
+        actor_id: str | None = None,
+    ) -> None:
+        """Set display_order on a list of inclusion IDs in sequence."""
+        inclusions = {i.id: i for i in self.find_by_package(package_id)}
+        for idx, iid in enumerate(ordered_ids):
+            if iid in inclusions:
+                self.update(inclusions[iid], actor_id=actor_id, display_order=idx)
 
 class PackageItineraryDayRepository(BaseRepository[PackageItineraryDay]):
     model = PackageItineraryDay
@@ -60,7 +80,6 @@ class PackageItineraryDayRepository(BaseRepository[PackageItineraryDay]):
         return self._session.execute(stmt).scalar_one_or_none()
 
     def max_day_number(self, package_id: str) -> int:
-        from sqlalchemy import func
         stmt = (
             select(func.max(PackageItineraryDay.day_number))
             .where(PackageItineraryDay.package_id == package_id)

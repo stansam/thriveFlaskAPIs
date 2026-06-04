@@ -22,6 +22,11 @@ class PackageHighlightResponse(AuditFieldsMixin):
     icon:          str | None
     display_order: int
 
+class PackageHighlightUpdateRequest(StrictRequestModel):
+    text:          str | None = None
+    icon:          str | None = None
+    display_order: int | None = None
+
 # PACKAGE INCLUSION
 class PackageInclusionCreateRequest(StrictRequestModel):
     inclusion_type:  InclusionType
@@ -37,6 +42,13 @@ class PackageInclusionResponse(AuditFieldsMixin):
     notes:          str | None
     extra_cost_usd: Decimal | None
     display_order:  int
+
+class PackageInclusionUpdateRequest(StrictRequestModel):
+    inclusion_type:  InclusionType | None = None
+    label:           str | None = None
+    notes:           str | None = None
+    extra_cost_usd:  Decimal | None = None
+    display_order:   int | None = None
 
 # PACKAGE ITINERARY DAY
 class PackageItineraryDayCreateRequest(StrictRequestModel):

@@ -1,11 +1,13 @@
 from flask import Flask
 from app.api.v1.user import user_bp
 from app.api.v1.auth import auth_bp
+from app.api.v1.package import package_bp
 
 def _register_blueprints(app: Flask) -> None:
     """Register all API blueprints."""
     app.register_blueprint(user_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(package_bp)
     # from app.blueprints.clients_bp  import clients_bp
     # from app.blueprints.packages_bp import packages_bp
     # from app.blueprints.bookings_bp import bookings_bp

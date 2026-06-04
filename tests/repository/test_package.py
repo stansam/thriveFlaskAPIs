@@ -1,7 +1,6 @@
 import pytest
 from decimal import Decimal
-from werkzeug.exceptions import NotFound
-
+from app.core.errors.handlers import NotFoundError
 from app.repository.package import TravelPackageRepository
 from app.models import TravelPackage
 from app.enums import PackageStatus
@@ -30,7 +29,7 @@ class TestTravelPackageRepository:
         assert repo.find_by_slug("unknown") is None
 
         assert repo.find_by_slug_or_404("test-slug") == p
-        with pytest.raises(NotFound):
+        with pytest.raises(NotFoundError):
             repo.find_by_slug_or_404("unknown")
 
     def test_find_active_and_featured(self, repo, db_session):

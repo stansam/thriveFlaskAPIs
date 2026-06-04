@@ -43,9 +43,12 @@ from app.dto.package import (
     TravelPackageCreateRequest, TravelPackageUpdateRequest, TravelPackageResponse,
     TravelPackageSummaryResponse,
 )
+from app.dto.package_insurance import (
+    PackageInsuranceCreateRequest, PackageInsuranceUpdateRequest, PackageInsuranceResponse,
+)
 from app.dto.package_items import (
-    PackageHighlightCreateRequest, PackageHighlightResponse,
-    PackageInclusionCreateRequest, PackageInclusionResponse,
+    PackageHighlightCreateRequest, PackageHighlightUpdateRequest, PackageHighlightResponse,
+    PackageInclusionCreateRequest, PackageInclusionUpdateRequest, PackageInclusionResponse,
     PackageItineraryDayCreateRequest, PackageItineraryDayUpdateRequest,
     PackageItineraryDayResponse,
     PackagePriceTierCreateRequest, PackagePriceTierUpdateRequest, PackagePriceTierResponse,

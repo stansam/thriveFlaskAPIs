@@ -2,7 +2,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
-    Enum, ForeignKey, Numeric, SmallInteger, String, Text,
+    Enum, ForeignKey, Numeric, SmallInteger, String, Text, UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -108,6 +108,13 @@ class PackageItineraryDay(db.Model, AuditMixin):  # type: ignore[name-defined, m
     """
 
     __tablename__ = "package_itinerary_days"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "package_id", "day_number",
+            name="uq_package_itinerary_days_package_day"
+        ),
+    )
 
     package_id: Mapped[str] = mapped_column(
         String(36),

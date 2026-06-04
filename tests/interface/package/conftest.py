@@ -90,8 +90,10 @@ def service(
         package_inclusion_repo=package_inclusion_repo,
         package_itinerary_day_repo=package_itinerary_day_repo,
         package_price_tier_repo=package_price_tier_repo,
+        package_insurance_repo=MagicMock(),
         package_media_repo=package_media_repo,
         package_booking_repo=package_booking_repo,
+        media_asset_repo=MagicMock(),
         audit_service=audit_service,
         uow=uow,
     )

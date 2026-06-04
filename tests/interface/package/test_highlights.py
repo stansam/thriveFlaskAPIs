@@ -2,7 +2,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from app.dto import PackageHighlightCreateRequest
+from app.dto import PackageHighlightCreateRequest, PackageHighlightUpdateRequest
 from app.core.events.dataclass.package import (
     PackageHighlightAddedEvent, PackageHighlightUpdatedEvent, PackageHighlightDeletedEvent
 )
@@ -27,7 +27,8 @@ def test_add_highlight(mock_bus, service, package_repo, package_highlight_repo, 
 def test_update_highlight(mock_bus, service, package_highlight_repo, uow, mock_highlight):
     package_highlight_repo.get.return_value = mock_highlight
 
-    result = service.update_highlight("hl-123", {"text": "Updated View"}, actor_id="admin-1")
+    req = PackageHighlightUpdateRequest.model_validate({"text": "Updated View"})
+    result = service.update_highlight("hl-123", req, actor_id="admin-1")
 
     package_highlight_repo.update.assert_called_once()
     assert uow.committed == 1

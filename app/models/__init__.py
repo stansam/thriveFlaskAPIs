@@ -12,6 +12,7 @@ from app.models.notification_template import NotificationTemplate
 from app.models.package import TravelPackage
 from app.models.package_items import PackageHighlight, PackageInclusion, PackageItineraryDay
 from app.models.package_price_tier import PackagePriceTier
+from app.models.package_insurance import PackageInsurance
 from app.models.booking import Booking
 from app.models.booking_passenger import  BookingPassenger
 from app.models.flight_booking import FlightBooking, FlightSegment
@@ -42,6 +43,7 @@ __all__ = [
     "TravelPackage",
     "PackageHighlight", "PackageInclusion", "PackageItineraryDay",
     "PackagePriceTier",
+    "PackageInsurance",
     "Booking",
     "BookingPassenger",
     "FlightBooking", "FlightSegment",

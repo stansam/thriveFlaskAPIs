@@ -74,8 +74,9 @@ def test_update_package_duplicate_slug_raises(service, package_repo, mock_packag
 
 
 @patch("app.interface.package.services.event_bus")
-def test_publish_package_success(mock_bus, service, package_repo, package_price_tier_repo, package_media_repo, uow, mock_package, mock_cover_media, mock_highlight):
+def test_publish_package_success(mock_bus, service, package_repo, package_price_tier_repo, package_media_repo, uow, mock_package, mock_cover_media, mock_highlight, mock_itinerary_day):
     mock_package.highlights = [mock_highlight]
+    mock_package.itinerary_days = [mock_itinerary_day]
     package_price_tier_repo.find_by_package.return_value = [MagicMock()]
     package_media_repo.find_cover.return_value = mock_cover_media
     package_repo.get.return_value = mock_package

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from sqlalchemy import and_, or_, select
+from sqlalchemy import or_, select
 
 from app.models import PackagePriceTier
 from app.repository.base import BaseRepository

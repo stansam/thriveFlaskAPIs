@@ -2,7 +2,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
-    Boolean, Enum, Numeric, SmallInteger, String, Text,
+    Boolean, Enum, Numeric, SmallInteger, String, Text, CheckConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -14,9 +14,25 @@ if TYPE_CHECKING:
     from app.models.package_media import PackageMedia
     from app.models.package_items import PackageHighlight, PackageInclusion, PackageItineraryDay
     from app.models.package_price_tier import PackagePriceTier
+    from app.models.package_insurance import PackageInsurance
 
 class TravelPackage(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     __tablename__ = "travel_packages"
+
+    __table_args__ = (
+        CheckConstraint(
+            "duration_days >= duration_nights",
+            name="ck_travel_packages_duration_days_gte_nights"
+        ),
+        CheckConstraint(
+            "min_participants >= 1",
+            name="ck_travel_packages_min_participants_positive"
+        ),
+        CheckConstraint(
+            "base_price_usd > 0",
+            name="ck_travel_packages_base_price_positive"
+        ),
+    )
 
     # Identity & copy
     title: Mapped[str] = mapped_column(
@@ -131,6 +147,12 @@ class TravelPackage(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     )
     media: Mapped[list["PackageMedia"]] = relationship(
         "PackageMedia",
+        back_populates="package",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    insurance_options: Mapped[list["PackageInsurance"]] = relationship(
+        "PackageInsurance",
         back_populates="package",
         cascade="all, delete-orphan",
         lazy="selectin",

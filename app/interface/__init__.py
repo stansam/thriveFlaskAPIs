@@ -21,8 +21,10 @@ from app.repository import (
     package_inclusion_repo,
     package_itinerary_day_repo,
     package_price_tier_repo,
+    package_insurance_repo,
     package_media_repo,
     package_booking_repo,
+    media_repo,
 )
 from app.core.unit_of_work import SQLAlchemyUnitOfWork
 from app.core.token_denylist import RedisTokenDenylist
@@ -110,8 +112,10 @@ class _ServiceRegistry:
             package_inclusion_repo=package_inclusion_repo,
             package_itinerary_day_repo=package_itinerary_day_repo,
             package_price_tier_repo=package_price_tier_repo,
+            package_insurance_repo=package_insurance_repo,
             package_media_repo=package_media_repo,
             package_booking_repo=package_booking_repo,
+            media_asset_repo=media_repo,
             audit_service=self.audit,
             uow=_uow(),
         )

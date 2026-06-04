@@ -36,6 +36,7 @@ from .package_items import (
     PackageItineraryDayRepository,
 )
 from .package_price import PackagePriceTierRepository
+from .package_insurance import PackageInsuranceRepository
 from .package_media import PackageMediaRepository
 from .booking import BookingRepository
 from .flight_booking import FlightBookingRepository
@@ -80,6 +81,7 @@ class _RepositoryRegistry:
     package_inclusion:        PackageInclusionRepository       = PackageInclusionRepository()
     package_itinerary_day:    PackageItineraryDayRepository    = PackageItineraryDayRepository()
     package_price_tier:       PackagePriceTierRepository       = PackagePriceTierRepository()
+    package_insurance:        PackageInsuranceRepository       = PackageInsuranceRepository()
     package_media:            PackageMediaRepository           = PackageMediaRepository()
 
     # Bookings
@@ -130,6 +132,7 @@ package_highlight_repo     = registry.package_highlight
 package_inclusion_repo     = registry.package_inclusion
 package_itinerary_day_repo = registry.package_itinerary_day
 package_price_tier_repo    = registry.package_price_tier
+package_insurance_repo     = registry.package_insurance
 package_media_repo         = registry.package_media
 booking_repo               = registry.booking
 flight_booking_repo        = registry.flight_booking
@@ -159,7 +162,7 @@ __all__ = [
     "client_repo", "client_preference_repo",
     "corporate_account_repo", "corporate_subscription_repo",
     "package_repo", "package_highlight_repo", "package_inclusion_repo",
-    "package_itinerary_day_repo", "package_price_tier_repo", "package_media_repo",
+    "package_itinerary_day_repo", "package_price_tier_repo", "package_insurance_repo", "package_media_repo",
     "booking_repo", "flight_booking_repo", "hotel_booking_repo",
     "car_booking_repo", "package_booking_repo", "booking_passenger_repo",
     "fee_schedule_repo", "fee_repo", "fee_snapshot_repo",

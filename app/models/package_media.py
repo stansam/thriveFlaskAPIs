@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Any
 from sqlalchemy import (
-    Boolean, ForeignKey, SmallInteger, String
+    Boolean, ForeignKey, SmallInteger, String, Index, text
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -13,6 +13,16 @@ if TYPE_CHECKING:
 
 class PackageMedia(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     __tablename__ = "package_media"
+
+    __table_args__ = (
+        Index(
+            "ix_package_media_single_cover",
+            "package_id",
+            unique=True,
+            postgresql_where=text("is_cover = true"),
+            sqlite_where=text("is_cover = 1"),
+        ),
+    )
 
     package_id: Mapped[str] = mapped_column(
         String(36),
