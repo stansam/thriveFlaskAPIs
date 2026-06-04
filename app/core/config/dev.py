@@ -9,5 +9,6 @@ class DevelopmentConfig(BaseConfig):
     LOG_FORMAT: Literal["text", "json"] = "text"
     DATABASE_ECHO: bool = False
     EMAIL_BACKEND: Literal["sendgrid", "smtp", "console"] = "console"
+    SESSION_COOKIE_SECURE: bool = False
 
 

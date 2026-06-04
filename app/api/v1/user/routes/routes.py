@@ -6,6 +6,7 @@ from flask_login import login_required, current_user
 
 from app.core.auth_user import require_roles
 from app.enums import UserRole
+from app.core.security import csrf_protect
 from app.core.dependencies import get_services
 from app.dto import (
     UserCreateRequest,
@@ -31,7 +32,7 @@ from app.api.v1.user.schemas import (
 
 
 class UserListCreateView(MethodView):
-    decorators = [login_required, require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)]
+    decorators = [login_required, require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN), csrf_protect]
 
     def get(self) -> tuple:
         schema = UserListQuerySchema()
@@ -87,7 +88,7 @@ class MeView(MethodView):
 
 
 class UserDetailView(MethodView):
-    decorators = [login_required]
+    decorators = [login_required, csrf_protect]
 
     def get(self, user_id: str) -> tuple:
         actor = current_user.domain_user
@@ -126,7 +127,7 @@ class UserDetailView(MethodView):
 
 
 class UserDeactivateView(MethodView):
-    decorators = [login_required, require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)]
+    decorators = [login_required, require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN), csrf_protect]
 
     def post(self, user_id: str) -> tuple:
         if current_user.get_id() == user_id:
@@ -141,7 +142,7 @@ class UserDeactivateView(MethodView):
 
 
 class UserReactivateView(MethodView):
-    decorators = [login_required, require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)]
+    decorators = [login_required, require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN), csrf_protect]
 
     def post(self, user_id: str) -> tuple:
         actor_id = current_user.get_id()
@@ -153,7 +154,7 @@ class UserReactivateView(MethodView):
 
 
 class UserPreferenceView(MethodView):
-    decorators = [login_required]
+    decorators = [login_required, csrf_protect]
 
     def get(self, user_id: str) -> tuple:
         actor = current_user.domain_user

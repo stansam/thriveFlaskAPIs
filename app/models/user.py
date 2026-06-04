@@ -6,6 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import AuditMixin, db
 from app.enums import UserRole
+from app.core.security.encryption import encrypt_field, decrypt_field
 
 if TYPE_CHECKING:
     from app.models.audit import AuditLog
@@ -33,10 +34,11 @@ class User(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
         default=UserRole.AGENT,
     )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    mfa_secret: Mapped[str | None] = mapped_column(
-        String(64),
+    _mfa_secret: Mapped[str | None] = mapped_column(
+        "mfa_secret",
+        String(256),
         nullable=True,
-        doc="TOTP seed (base-32). NULL = MFA not enrolled.",
+        doc="TOTP seed (base-32, encrypted at rest). NULL = MFA not enrolled.",
     )
     last_login_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -70,6 +72,16 @@ class User(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
         cascade="all, delete-orphan",
         foreign_keys="UserPreference.user_id",
     )
+
+    @property
+    def mfa_secret(self) -> str | None:
+        """Return decrypted MFA secret (or None)."""
+        return decrypt_field(self._mfa_secret)
+
+    @mfa_secret.setter
+    def mfa_secret(self, value: str | None) -> None:
+        """Encrypt and store MFA secret."""
+        self._mfa_secret = encrypt_field(value)
 
     @property
     def mfa_is_enrolled(self) -> bool:

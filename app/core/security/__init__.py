@@ -35,3 +35,5 @@ from app.core.security.totp import(
     generate_totp_secret, get_totp_provisioning_uri, verify_totp, generate_totp_qr_data_url,
     is_totp_replayed, record_totp_use
 )
+
+from app.core.security.csrf import csrf_protect

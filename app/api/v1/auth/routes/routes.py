@@ -9,6 +9,7 @@ from flask.views import MethodView
 from flask_login import login_required, current_user
 from app.extensions import limiter
 from app.core.config import settings
+from app.core.security import csrf_protect
 
 from app.core.dependencies import get_services
 from app.core.utils import get_user_ip, get_user_agent
@@ -71,7 +72,7 @@ class LoginView(MethodView):
 
 class LogoutView(MethodView):
     """POST /api/v1/auth/logout"""
-    decorators = [login_required]
+    decorators = [login_required, csrf_protect]
 
     def post(self) -> tuple:
         ip_address = get_user_ip()
@@ -89,6 +90,7 @@ class ChangePasswordView(MethodView):
     decorators = [
         limiter.limit("20/minute"),
         login_required,
+        csrf_protect,
     ]
 
     def post(self) -> tuple:
@@ -165,7 +167,7 @@ class ResetPasswordView(MethodView):
 
 class MFAEnrollView(MethodView):
     """POST /api/v1/auth/mfa/enroll"""
-    decorators = [login_required]
+    decorators = [login_required, csrf_protect]
 
     def post(self) -> tuple:
         result = get_services().auth.enroll_mfa(
@@ -180,7 +182,7 @@ class MFAEnrollView(MethodView):
 
 class MFAConfirmView(MethodView):
     """POST /api/v1/auth/mfa/confirm"""
-    decorators = [login_required]
+    decorators = [login_required, csrf_protect]
 
     def post(self) -> tuple:
         json_data = request.get_json()
@@ -203,7 +205,7 @@ class MFAConfirmView(MethodView):
 
 class MFADisableView(MethodView):
     """POST /api/v1/auth/mfa/disable"""
-    decorators = [login_required]
+    decorators = [login_required, csrf_protect]
 
     def post(self) -> tuple:
         json_data = request.get_json()

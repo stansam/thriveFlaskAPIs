@@ -58,6 +58,22 @@ class BaseConfig(BaseSettings):
     ARGON2_MEMORY_COST: int = 65536    # 64 MiB
     ARGON2_PARALLELISM: int = 4
 
+    MFA_ENCRYPTION_KEY: str = Field(
+        default="",
+        description=(
+            "Fernet symmetric encryption key for mfa_secret column. "
+            "Generate with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\" "
+            "MUST be set in production. Leave empty to disable encryption (development only)."
+        ),
+    )
+
+    # Session / CSRF
+    SESSION_COOKIE_SAMESITE: str = "Lax"
+    SESSION_COOKIE_SECURE: bool = True
+    SESSION_COOKIE_HTTPONLY: bool = True
+    SESSION_COOKIE_NAME: str = "thrive_session"
+    WTF_CSRF_ENABLED: bool = True
+
     # TOTP
     TOTP_ISSUER_NAME: str = "Thrive Travel"
     TOTP_DIGITS: int = 6
@@ -179,6 +195,14 @@ class BaseConfig(BaseSettings):
             return v.replace("postgres://", "postgresql+psycopg2://", 1)
         return v
 
+    @field_validator("MFA_ENCRYPTION_KEY", mode="after")
+    @classmethod
+    def _warn_missing_mfa_key(cls, v: str, info) -> str:
+        import os
+        if not v and os.environ.get("FLASK_ENV", "development") == "production":
+            raise ValueError("MFA_ENCRYPTION_KEY must be set in production.")
+        return v
+
     @property
     def sqlalchemy_engine_options(self) -> dict:
         """Passed directly to Flask-SQLAlchemy SQLALCHEMY_ENGINE_OPTIONS."""
@@ -210,4 +234,9 @@ class BaseConfig(BaseSettings):
             "SQLALCHEMY_TRACK_MODIFICATIONS": False,
             "RATELIMIT_STORAGE_URI": self.RATELIMIT_STORAGE_URI,
             "RATELIMIT_DEFAULT": f"{self.RATE_LIMIT_API_PER_MINUTE}/minute",
+            "SESSION_COOKIE_SAMESITE": self.SESSION_COOKIE_SAMESITE,
+            "SESSION_COOKIE_SECURE": self.SESSION_COOKIE_SECURE,
+            "SESSION_COOKIE_HTTPONLY": self.SESSION_COOKIE_HTTPONLY,
+            "SESSION_COOKIE_NAME": self.SESSION_COOKIE_NAME,
+            "WTF_CSRF_ENABLED": self.WTF_CSRF_ENABLED,
         }

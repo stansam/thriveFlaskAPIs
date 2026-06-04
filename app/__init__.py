@@ -109,7 +109,7 @@ def create_app(env: str | None = None, test_config: dict | None = None) -> Flask
         app,
         origins=config.CORS_ORIGINS,
         supports_credentials=config.CORS_SUPPORTS_CREDENTIALS,
-        allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
+        allow_headers=["Content-Type", "Authorization", "X-Request-ID", "X-Requested-With"],
         expose_headers=["X-Request-ID", "X-Response-Time"],
         methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     )
@@ -137,6 +137,21 @@ def create_app(env: str | None = None, test_config: dict | None = None) -> Flask
     # ── 9. Register middleware ──────────────────────────────────────────
     from app.core.middleware import register_middleware
     register_middleware(app)
+
+    @app.after_request
+    def set_csrf_cookie(response):
+        """Set CSRF token in a readable cookie for SPA frontend."""
+        if app.config.get("WTF_CSRF_ENABLED", True):
+            from flask_wtf.csrf import generate_csrf
+            csrf_cookie_name = f"{app.config.get('SESSION_COOKIE_NAME', 'thrive_session')}_csrf"
+            response.set_cookie(
+                csrf_cookie_name,
+                generate_csrf(),
+                samesite="Lax",
+                httponly=False,  # Must be readable by JavaScript
+                secure=app.config.get("SESSION_COOKIE_SECURE", True),
+            )
+        return response
 
     # ── 10. Health check ────────────────────────────────────────────────
     _register_health_check(app)
