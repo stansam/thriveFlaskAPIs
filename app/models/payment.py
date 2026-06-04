@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from datetime import datetime
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, String, Text
@@ -50,6 +50,9 @@ class Payment(db.Model, AuditMixin):  # type: ignore[name-defined, misc]
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     booking: Mapped["Booking"] = relationship("Booking", back_populates="payments")
+
+    def __init__(self, **kwargs: Any) -> None:
+        super(Payment, self).__init__(**kwargs)
 
     def __repr__(self) -> str:
         return (
