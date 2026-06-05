@@ -94,3 +94,8 @@ from app.dto.notification import (
 from app.dto.referral import ReferralResponse, ReferralCreateRequest
 from app.dto.loyalty import LoyaltyLedgerEntryResponse, LoyaltyBalanceResponse
 from app.dto.audit import AuditLogResponse
+from app.dto.flight_adapter import (
+    FlightSearchRequest, FlightSearchResponse, FlightOfferResult, 
+    FlightLegDetail, FlightSegment, BookingOption, 
+    PriceCheckResult, FlightDetails, LocationResult
+)

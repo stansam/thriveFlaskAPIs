@@ -48,8 +48,12 @@ class PackageListView(MethodView):
             page=query_params.get("page"),
             per_page=query_params.get("per_page")
         )
+        data = {
+            "items": [item.model_dump(mode="json") for item in result.get("items", [])],
+            **{k: v for k, v in result.items() if k != "items"}
+        }
         return success_response(
-            data=result,
+            data=data,
             message="Packages retrieved successfully."
         )
 

@@ -24,7 +24,7 @@ from .booking import(
     FlightCabin, RoomType, CarCategory
 )
 from .audit import AuditActionType
-
+from .flight_adapter import PassengerType, CabinClass, SortMode
 __all__ = [
     "UserRole",
 
@@ -69,4 +69,8 @@ __all__ = [
     "CarCategory",
 
     "AuditActionType",
+
+    "PassengerType",
+    "CabinClass",
+    "SortMode",
 ]

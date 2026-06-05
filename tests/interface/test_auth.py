@@ -230,10 +230,12 @@ def test_login_mfa_invalid_code(mock_verify, mock_login, service, user_repo, moc
     mock_login.assert_not_called()
 
 
+@patch("app.interface.auth.services.record_totp_use")
+@patch("app.interface.auth.services.is_totp_replayed", return_value=False)
 @patch("app.interface.auth.services.event_bus")
 @patch("app.interface.auth.services.login_user")
 @patch("app.interface.auth.services.verify_totp", return_value=True)
-def test_login_mfa_valid_code(mock_verify, mock_login, mock_bus, service, user_repo, mock_user):
+def test_login_mfa_valid_code(mock_verify, mock_login, mock_bus, mock_replayed, mock_record, service, user_repo, mock_user):
     mock_user.mfa_secret = "SOMESECRET"
     user_repo.find_by_email.return_value = mock_user
 
@@ -419,9 +421,11 @@ def test_enroll_mfa_already_enrolled(service, user_repo, mock_user):
 
 # ── MFA Confirm ───────────────────────────────────────────────────────────────
 
+@patch("app.interface.auth.services.record_totp_use")
+@patch("app.interface.auth.services.is_totp_replayed", return_value=False)
 @patch("app.interface.auth.services.event_bus")
 @patch("app.interface.auth.services.verify_totp", return_value=True)
-def test_confirm_mfa_success(mock_verify, mock_bus, service, user_repo, audit_service, uow, mock_user):
+def test_confirm_mfa_success(mock_verify, mock_bus, mock_replayed, mock_record, service, user_repo, audit_service, uow, mock_user):
     mock_user.mfa_secret = "REALSECRET:pending"
     user_repo.get.return_value = mock_user
 
@@ -454,9 +458,11 @@ def test_confirm_mfa_not_started(service, user_repo, mock_user):
 
 # ── MFA Disable ───────────────────────────────────────────────────────────────
 
+@patch("app.interface.auth.services.record_totp_use")
+@patch("app.interface.auth.services.is_totp_replayed", return_value=False)
 @patch("app.interface.auth.services.event_bus")
 @patch("app.interface.auth.services.verify_totp", return_value=True)
-def test_disable_mfa_success(mock_verify, mock_bus, service, user_repo, audit_service, uow, mock_user):
+def test_disable_mfa_success(mock_verify, mock_bus, mock_replayed, mock_record, service, user_repo, audit_service, uow, mock_user):
     mock_user.mfa_secret = "ACTIVE_SECRET"
     user_repo.get.return_value = mock_user
 
