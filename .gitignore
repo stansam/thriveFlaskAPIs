@@ -12,6 +12,7 @@ dump.rdb
 tempo/
 .agent/
 app12/
+externalJSON/
 tmp/
 .mypy_cache/
 .extras
